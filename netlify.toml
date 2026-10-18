@@ -1,0 +1,5 @@
+# Static site: index.html is already built and committed. No build step on Netlify
+# (regenerate locally with `python3 build.py`, then commit + push).
+[build]
+  command = ""
+  publish = "."
