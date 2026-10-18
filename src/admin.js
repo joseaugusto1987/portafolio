@@ -34,6 +34,7 @@ async function api(payload){
 function normalize(d){
   d.projects = (d.projects || []).map(p => {
     LISTS.forEach(k => p[k] = Array.isArray(p[k]) ? p[k] : []);
+    p.industry = p.industry.map(x => x.replace(/^Goverment/, "Government"));
     p.status = p.status === "draft" ? "draft" : "published";
     p.highlight = !!p.highlight; p.link = p.link || "";
     p.sub = p.sub || ""; p.excerpt = p.excerpt || ""; p.html = p.html || "";

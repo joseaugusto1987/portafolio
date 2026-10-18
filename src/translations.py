@@ -59,7 +59,7 @@ DICT = {
     "My intention isn't to produce change.": "Mi intención no es producir cambio.", "It's to alter trajectories.": "Es alterar trayectorias.",
     # industries
     "CPG": "Bienes de consumo", "Culture & Museums": "Cultura y museos", "Education": "Educación", "Energy": "Energía",
-    "Financial Services": "Servicios financieros", "Goverment / Public": "Gobierno / Público", "Retail": "Retail",
+    "Financial Services": "Servicios financieros", "Government / Public": "Gobierno / Público", "Goverment / Public": "Gobierno / Público", "Retail": "Retail",
     "Science - Research": "Ciencia - Investigación", "Third Sector / NGOs": "Tercer sector / ONG",
     # types
     "CX Strategy": "Estrategia de CX", "Creative space": "Espacio creativo", "Customer Experience and Innovation": "Experiencia de cliente e innovación",

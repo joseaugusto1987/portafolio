@@ -21,6 +21,7 @@ i = next(n for n, l in enumerate(lines) if l.startswith("const DATA = "))
 raw = lines[i][len("const DATA = "):].rstrip().rstrip(";")
 data = json.loads(raw)
 for p in data["projects"]:
+    p["industry"] = [x.replace("Goverment", "Government") for x in p["industry"]]   # typo in the original data
     p["status"] = "published"
     p.setdefault("cover", "")
     p["link"] = p.get("link") or ""
@@ -64,7 +65,7 @@ let DATA, P, C, PG;
 function setData(d){
   const dv = u => (u || "").replace(/https:\/\/drive\.google\.com\/thumbnail\?id=([\w-]+)[^"'\s]*/g, "https://lh3.googleusercontent.com/d/$1=w1600");
   const fx = h => dv(h || "").replace(/<img (?![^>]*referrerpolicy)/g, '<img referrerpolicy="no-referrer" ');
-  d.projects.forEach(p => { p.cover = dv(p.cover); p.html = fx(p.html); if (p.es && p.es.html) p.es.html = fx(p.es.html); });
+  d.projects.forEach(p => { p.industry = (p.industry || []).map(x => x.replace(/^Goverment/, "Government")); p.cover = dv(p.cover); p.html = fx(p.html); if (p.es && p.es.html) p.es.html = fx(p.es.html); });
   DATA = d; const adm = !!window.ADMIN_ON, v = i18nLocalize(d);
   P = v.projects.filter(p => adm || p.status !== "draft"); C = v.config; PG = v.pages;
 }

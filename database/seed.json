@@ -371,7 +371,7 @@
     "The Bogotá Chamber of Commerce (CCB)"
    ],
    "industry": [
-    "Goverment / Public"
+    "Government / Public"
    ],
    "type": [
     "CX Strategy"
@@ -742,7 +742,7 @@
    "year": 2023,
    "client": [],
    "industry": [
-    "Goverment / Public"
+    "Government / Public"
    ],
    "type": [
     "Sustainable Futures"
@@ -1044,7 +1044,7 @@
    ],
    "industry": [
     "Culture & Museums",
-    "Goverment / Public"
+    "Government / Public"
    ],
    "type": [
     "Science center",
@@ -1113,7 +1113,7 @@
     "Biblioteca Pública Piloto"
    ],
    "industry": [
-    "Goverment / Public",
+    "Government / Public",
     "Culture & Museums"
    ],
    "type": [
@@ -1284,7 +1284,7 @@
     "Biblioteca Departamental"
    ],
    "industry": [
-    "Goverment / Public",
+    "Government / Public",
     "Culture & Museums"
    ],
    "type": [
@@ -1319,7 +1319,7 @@
     "Panama Canal Authority"
    ],
    "industry": [
-    "Goverment / Public"
+    "Government / Public"
    ],
    "type": [
     "Exhibition"
@@ -1384,7 +1384,7 @@
     "Secretaría Distrital de Cultura Recreación y Deporte (Bogotá)"
    ],
    "industry": [
-    "Goverment / Public",
+    "Government / Public",
     "Culture & Museums"
    ],
    "type": [
@@ -1523,7 +1523,7 @@
    ],
    "industry": [
     "Culture & Museums",
-    "Goverment / Public"
+    "Government / Public"
    ],
    "type": [
     "Temporary exhibition",
@@ -1593,7 +1593,7 @@
     "Alcaldía de Medellín"
    ],
    "industry": [
-    "Goverment / Public",
+    "Government / Public",
     "Education"
    ],
    "type": [
@@ -1998,6 +1998,7 @@
    "Education": "Educación",
    "Energy": "Energía",
    "Financial Services": "Servicios financieros",
+   "Government / Public": "Gobierno / Público",
    "Goverment / Public": "Gobierno / Público",
    "Retail": "Retail",
    "Science - Research": "Ciencia - Investigación",
