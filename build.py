@@ -202,6 +202,10 @@ html[lang="es"] .phead:has(.corner) h1{max-width:64%}
 .no-es{font:400 14px/1.5 var(--font-mono);opacity:.7;border-left:3px solid var(--hn-yellow);padding-left:12px}
 .posts{margin-top:56px}.posts-n{margin:0 0 16px}
 .signal-in>div:nth-child(1){grid-column:1/-1;display:flex;gap:28px 48px;flex-wrap:wrap}
+@media (pointer:fine){html.hn-cursor,html.hn-cursor *{cursor:none!important}
+html.hn-cursor #adm,html.hn-cursor #adm *,html.hn-cursor .mdl-bg,html.hn-cursor .mdl-bg *{cursor:auto!important}
+html.hn-cursor #adm button,html.hn-cursor #adm select,html.hn-cursor #adm label,html.hn-cursor .mdl-bg button{cursor:pointer!important}
+html.hn-cursor #adm input,html.hn-cursor #adm textarea,html.hn-cursor #adm [contenteditable],html.hn-cursor .mdl-bg input{cursor:text!important}}
 /* ---------- home › what is hipernova ---------- */
 .mean-s{position:relative;height:340vh}
 .mean-st{position:sticky;top:72px;height:calc(100vh - 72px);overflow:hidden}
@@ -239,7 +243,7 @@ html[lang="es"] .phead:has(.corner) h1{max-width:64%}
 .method-node:hover:not(.on){background:#F4F4EE;color:#222}
 """
 hero_js = (HERE / "src" / "hero.js").read_text(encoding="utf8").replace("/*PHRASES*/[]", json.dumps(HERO_PHRASES, ensure_ascii=False))
-js = (HERE / "src" / "admin.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "duo.js").read_text(encoding="utf8") + "\n" + hero_js + "\n" + (HERE / "src" / "method.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "posts.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "meaning.js").read_text(encoding="utf8")
+js = (HERE / "src" / "admin.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "duo.js").read_text(encoding="utf8") + "\n" + hero_js + "\n" + (HERE / "src" / "method.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "posts.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "meaning.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "cursor.js").read_text(encoding="utf8")
 import base64
 FAV = "data:image/png;base64," + base64.b64encode((HERE / "favicon.png").read_bytes()).decode()
 html = html.replace("</head>", '<link rel="icon" type="image/png" href="' + FAV + '">\n<link rel="apple-touch-icon" href="' + FAV + '">\n</head>', 1)

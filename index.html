@@ -553,6 +553,10 @@ html[lang="es"] .phead:has(.corner) h1{max-width:64%}
 .no-es{font:400 14px/1.5 var(--font-mono);opacity:.7;border-left:3px solid var(--hn-yellow);padding-left:12px}
 .posts{margin-top:56px}.posts-n{margin:0 0 16px}
 .signal-in>div:nth-child(1){grid-column:1/-1;display:flex;gap:28px 48px;flex-wrap:wrap}
+@media (pointer:fine){html.hn-cursor,html.hn-cursor *{cursor:none!important}
+html.hn-cursor #adm,html.hn-cursor #adm *,html.hn-cursor .mdl-bg,html.hn-cursor .mdl-bg *{cursor:auto!important}
+html.hn-cursor #adm button,html.hn-cursor #adm select,html.hn-cursor #adm label,html.hn-cursor .mdl-bg button{cursor:pointer!important}
+html.hn-cursor #adm input,html.hn-cursor #adm textarea,html.hn-cursor #adm [contenteditable],html.hn-cursor .mdl-bg input{cursor:text!important}}
 /* ---------- home › what is hipernova ---------- */
 .mean-s{position:relative;height:340vh}
 .mean-st{position:sticky;top:72px;height:calc(100vh - 72px);overflow:hidden}
@@ -2120,6 +2124,36 @@ function initMeaning(){
 }
 window.initMeaning = initMeaning;
 initMeaning();
+})();
+
+/* HIPERNOVA — custom cursor (yellow dot that trails a small core; difference blend).
+   Fine pointers only. Switches back to the native cursor inside the admin and in modals. */
+(function(){
+"use strict";
+if (!matchMedia("(pointer:fine)").matches) return;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mk = (size, z) => {
+  const d = document.createElement("div");
+  Object.assign(d.style, {position: "fixed", left: 0, top: 0, width: size + "px", height: size + "px", marginLeft: -size / 2 + "px", marginTop: -size / 2 + "px", borderRadius: "50%", background: "#FDEE3D", pointerEvents: "none", zIndex: z, opacity: 0, transition: "opacity .3s", willChange: "transform"});
+  d.setAttribute("aria-hidden", "true"); return d;
+};
+const dot = mk(14, 9999), core = mk(5, 10000);
+dot.style.mixBlendMode = "difference";
+document.body.append(dot, core); document.documentElement.classList.add("hn-cursor");
+let mx = -200, my = -200, px = mx, py = my, shown = true;
+const show = on => { dot.style.opacity = core.style.opacity = on ? 1 : 0; };
+addEventListener("mousemove", e => {
+  mx = e.clientX; my = e.clientY;
+  shown = !e.target.closest("#adm,.mdl-bg");          // native cursor inside the admin
+  show(shown);
+}, {passive: true});
+document.addEventListener("mouseleave", () => show(false));
+const tick = () => {
+  const k = reduced ? 1 : .25; px += (mx - px) * k; py += (my - py) * k;
+  dot.style.transform = core.style.transform = `translate(${px}px,${py}px)`;
+  requestAnimationFrame(tick);
+};
+requestAnimationFrame(tick);
 })();
 
 </script>
