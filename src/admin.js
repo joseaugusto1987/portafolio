@@ -44,7 +44,7 @@ function normalize(d){
   ["home","approach","about","thinking"].forEach(k => d.es.pages[k] = d.es.pages[k] || {});
   d.projects.forEach(p => p.es = p.es || {});
   d.i18n = d.i18n || {}; d.i18n.es = Object.assign({}, HN_DICT, d.i18n.es || {});
-  d.config = d.config || {}; d.pages = d.pages || {};
+  d.config = d.config || {}; d.config.clients = d.config.clients || []; d.pages = d.pages || {};
   ["home","approach","about","thinking"].forEach(k => d.pages[k] = d.pages[k] || {});
   d.pages.home.phrases = d.pages.home.phrases || []; d.pages.home.hero = d.pages.home.hero || "";
   const A = d.pages.approach, B = d.pages.about, T = d.pages.thinking;
@@ -424,7 +424,7 @@ function viewEditor(){
     <div class="bub" id="adm-bub"><button data-t="b"><b>B</b></button><button data-t="i"><i>I</i></button><button data-t="link">Link</button><button data-t="h2">H2</button><button data-t="h3">H3</button><button data-t="quote">Quote</button><button data-t="ul">• List</button></div>
     <div class="plusmenu" id="adm-plusmenu"><button data-t="img">Image</button><button data-t="video">Video</button><button data-t="h2">Section heading</button><button data-t="h3">Subhead</button><button data-t="quote">Quote</button><button data-t="ul">Bullet list</button><button data-t="ol">Numbered list</button></div>`;
 }
-const NOT_TRANSLATED = /^(config\.(name|role|email|linkedin|substack)|pages\.thinking\.publications)$/;
+const NOT_TRANSLATED = /^(config\.(name|role|email|linkedin|substack|clients)|pages\.thinking\.publications)$/;
 const F = (label, path, o = {}) => {
   const ES = ADM.lang === "es"; if (ES && NOT_TRANSLATED.test(path)) return "";
   const base = getPath(ADM.data, path), lines = Array.isArray(base);
@@ -446,6 +446,7 @@ function viewSite(){
   return `<h1>Site texts</h1><p class="muted">Everything that isn't a case. Lists use one item per line.</p>
   <h2 class="sh">Identity & contact</h2><div class="g2">${F("Name", "config.name")}${F("Role", "config.role")}</div>
   ${F("Disciplines (one per line)", "config.disciplines")}
+  ${F("Client order — one name per line, most relevant first (shown in 5 moving rows on the home)", "config.clients", {rows:10, hint:"Names must match the Client field of your cases. Clients not listed follow automatically (by number of projects, then recency)."})}
   <div class="g2">${F("Email", "config.email", {ph:"you@email.com", hint:"Shows the “Write to me” button when filled"})}${F("LinkedIn URL", "config.linkedin")}</div>${F("Substack URL", "config.substack")}
   <h2 class="sh">Home</h2>${F("Hero headline (static line)", "pages.home.hero", {ph:"I help people, brands and organizations to"})}${F("Hero phrases (one per line — they rotate after the headline)", "pages.home.phrases", {rows:10})}${F("Bio (Practice section)", "pages.home.bio", {area:true, rows:5})}
   <h2 class="sh">Approach</h2>${F("Lead", "pages.approach.lead", {area:true, rows:4})}

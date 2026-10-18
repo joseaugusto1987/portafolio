@@ -11,7 +11,36 @@
   "substack": "",
   "linkedin": "",
   "email": "",
-  "date": "08.10.2026"
+  "date": "08.10.2026",
+  "clients": [
+   "Ecopetrol",
+   "Parque Explora",
+   "MTS",
+   "FAIN",
+   "Itaú Bank",
+   "The Bogotá Chamber of Commerce (CCB)",
+   "Afore Coppel",
+   "Coca-Cola Company",
+   "Coca-Cola FEMSA",
+   "Coppel - Retail",
+   "Zoológico de Barranquilla",
+   "Audubon",
+   "CIAT",
+   "Fundación Puerto Colombia",
+   "Ministry of Culture",
+   "Alcaldía de Cúcuta",
+   "Biblioteca Pública Piloto",
+   "Ministry of Education",
+   "Biblioteca Departamental",
+   "INCIVA",
+   "Panama Canal Authority",
+   "Embajada de Francia en Colombia",
+   "Secretaría Distrital de Cultura Recreación y Deporte (Bogotá)",
+   "Comfama",
+   "Gold Museum of Bogotá",
+   "Colciencias",
+   "Alcaldía de Medellín"
+  ]
  },
  "pages": {
   "home": {

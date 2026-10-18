@@ -30,6 +30,11 @@ for p in data["projects"]:
 _spec = importlib.util.spec_from_file_location("hn_translations", pathlib.Path(__file__).parent / "src" / "translations.py")
 TRN = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(TRN)
 assert len(TRN.CASES) == len(data["projects"]), "CASES must match the number of projects"
+_cnt, _last = {}, {}
+for _p in data["projects"]:
+    for _c in _p["client"]:
+        _cnt[_c] = _cnt.get(_c, 0) + 1; _last[_c] = max(_last.get(_c, 0), _p.get("year") or 0)
+data["config"]["clients"] = sorted(_cnt, key=lambda c: (-_cnt[c], -_last[c], c))   # priority: #projects, then recency
 data["es"] = TRN.ES
 data["i18n"] = {"es": TRN.DICT}
 BODIES_ES = json.loads((HERE / "src" / "case_bodies_es.json").read_text(encoding="utf8"))  # {slug: html_es}
@@ -67,7 +72,22 @@ function initialData(){
   try { const s = localStorage.getItem(HN_CONFIG.API_URL ? "hn_cache" : "hn_demo_data"); if (s) { const d = JSON.parse(s); d.projects.forEach(p => p.status = p.status || "published"); return d; } } catch(e){}
   return SEED;
 }
-setData(initialData());"""
+setData(initialData());
+/* clients marquee: rows of names, most relevant first (C.clients order, then #projects / recency) */
+function clientRows(n){
+  const cnt = {}, last = {};
+  P.forEach(p => p.client.forEach(c => { cnt[c] = (cnt[c] || 0) + 1; last[c] = Math.max(last[c] || 0, p.year || 0); }));
+  const auto = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || last[b] - last[a] || a.localeCompare(b));
+  const pri = (C.clients || []).filter(c => cnt[c]);
+  const order = pri.concat(auto.filter(c => !pri.includes(c)));
+  const rows = Array.from({length: n}, () => []); order.forEach((c, i) => rows[i % n].push(c));
+  return rows.filter(r => r.length);
+}
+const MQ_DUR = [52, 64, 46, 70, 58];
+const MQ_STAR = '<svg class="mq-s" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 2 C54 38 62 46 98 50 C62 54 54 62 50 98 C46 62 38 54 2 50 C38 46 46 38 50 2Z" fill="currentColor"/></svg>';
+function clientsMarquee(){
+  return clientRows(5).map((r, i) => `<div class="mq-row${i % 2 ? " out" : ""}" style="--d:${MQ_DUR[i % 5]}s;--dir:${i % 2 ? "reverse" : "normal"}"><div class="mq-track">${[0, 1].map(k => `<div class="mq-set"${k ? ' aria-hidden="true"' : ""}>${r.map(c => `<span class="mq-i">${esc(c)}</span>${MQ_STAR}`).join("")}</div>`).join("")}</div></div>`).join("");
+}"""
 html = "\n".join(lines)
 
 HERO_NEW = """<section class="hero-d s-matter">
@@ -152,6 +172,18 @@ for o, n in [('${sec(3, "Principles"', '${sec(5, "Principles"'), ('${sec(4, "Cli
     html = html.replace(o, n, 1)
 html = html.replace(' window.initMethod && initMethod();', ' window.initMethod && initMethod(); window.initMeaning && initMeaning();', 1)
 
+import re as _re
+_m = _re.search(r'\$\{sec\(\d, "Clients & partners".*?\)\}\n', html, _re.S)
+assert _m, "clients section not found"
+MQ = """</div>
+  <section class="clients-s s-space">
+    <div class="wrap"><span class="t-meta">06 — Clients & partners</span><h2 class="mq-h">Who I've worked with.</h2></div>
+    <div class="mq" aria-label="Clients and partners">${clientsMarquee()}</div>
+  </section>
+  <div class="wrap">
+  """
+html = html[:_m.start()] + MQ + html[_m.end():]
+
 # cover photo (duotone) in cards and case band; texture stays as fallback
 CARD_OLD = '<canvas class="ht" data-m="${MOTIF[p.texture] || "dots"}" data-seed="${P.indexOf(p) + 3}"></canvas>'
 CARD_NEW = '${p.cover ? `<img class="duo" referrerpolicy="no-referrer" src="${esc(p.cover)}" alt="" loading="lazy" data-k="card" data-t="${esc(p.texture)}" data-s="${P.indexOf(p) + 3}">` : `' + CARD_OLD + '`}'
@@ -206,6 +238,20 @@ html[lang="es"] .phead:has(.corner) h1{max-width:64%}
 html.hn-cursor #adm,html.hn-cursor #adm *,html.hn-cursor .mdl-bg,html.hn-cursor .mdl-bg *{cursor:auto!important}
 html.hn-cursor #adm button,html.hn-cursor #adm select,html.hn-cursor #adm label,html.hn-cursor .mdl-bg button{cursor:pointer!important}
 html.hn-cursor #adm input,html.hn-cursor #adm textarea,html.hn-cursor #adm [contenteditable],html.hn-cursor .mdl-bg input{cursor:text!important}}
+/* ---------- home › clients marquee ---------- */
+.clients-s{padding:clamp(72px,9vw,128px) 0 clamp(56px,7vw,96px);border-top:var(--border-bold);overflow:hidden}
+.mq-h{margin:20px 0 clamp(36px,5vw,64px);font:700 clamp(36px,4.6vw,56px)/.98 var(--font-display);letter-spacing:-.03em;text-transform:uppercase}
+.mq{display:grid;gap:clamp(8px,1.2vw,18px)}
+.mq-row{overflow:hidden;white-space:nowrap}
+.mq-track{display:flex;width:max-content;animation:mq var(--d,50s) linear infinite;animation-direction:var(--dir,normal)}
+.mq-row:hover .mq-track{animation-play-state:paused}
+.mq-set{display:flex;align-items:center;flex:none;gap:clamp(24px,3vw,48px);padding-right:clamp(24px,3vw,48px)}
+.mq-i{font:700 clamp(40px,7.2vw,112px)/1.05 var(--font-display);letter-spacing:-.04em;text-transform:uppercase;padding:0 .08em;transition:background var(--dur-fast) var(--ease-field)}
+.mq-row.out .mq-i{color:transparent;-webkit-text-stroke:2px var(--hn-deep-space)}
+.mq-i:hover{background:var(--hn-yellow);color:var(--hn-deep-space);-webkit-text-stroke:0}
+.mq-s{width:clamp(18px,2.4vw,34px);height:clamp(18px,2.4vw,34px);flex:none;color:var(--hn-deep-space)}
+@keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.mq-track{animation:none!important;flex-wrap:wrap;width:auto}.mq-set[aria-hidden]{display:none}.mq-row{white-space:normal}}
 /* ---------- home › what is hipernova ---------- */
 .mean-s{position:relative;height:340vh}
 .mean-st{position:sticky;top:72px;height:calc(100vh - 72px);overflow:hidden}
@@ -299,7 +345,7 @@ PAGES = [
 sheet("Pages", ["key", "value", "value_es"], [list(r) for r in PAGES], [26, 120, 120])
 c = data["config"]
 sheet("Config", ["key", "value", "value_es"], [
-    ["name", c["name"], ""], ["role", c["role"], ""], ["disciplines", J(c["disciplines"]), J(data["es"]["config"]["disciplines"])], ["substack", c["substack"], ""],
+    ["name", c["name"], ""], ["role", c["role"], ""], ["clients", J(c["clients"]), ""], ["disciplines", J(c["disciplines"]), J(data["es"]["config"]["disciplines"])], ["substack", c["substack"], ""],
     ["linkedin", c["linkedin"], ""], ["email", c["email"], ""], ["date", c["date"], ""],
 ], [18, 80, 80])
 sheet("Translations", ["en", "es"], [[k, v] for k, v in TRN.DICT.items()], [60, 60])

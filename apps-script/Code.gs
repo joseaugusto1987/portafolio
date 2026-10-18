@@ -150,7 +150,7 @@ function readAll_(includeDrafts) {
 
   return {
     config: {
-      name: cf.name || '', role: cf.role || '', disciplines: list_(cf.disciplines, '|'),
+      name: cf.name || '', role: cf.role || '', disciplines: list_(cf.disciplines, '|'), clients: list_(cf.clients, '|'),
       substack: cf.substack || '', linkedin: cf.linkedin || '', email: cf.email || '', date: cf.date || ''
     },
     pages: {
@@ -267,7 +267,7 @@ function saveAll_(d) {
     ['thinking.medium', T.medium, ET.medium || ''], ['thinking.publications', j(T.publications), '']
   ]);
   overwrite_('Config', [
-    ['name', C.name, ''], ['role', C.role, ''], ['disciplines', (C.disciplines || []).join(' | '), (EC.disciplines || []).join(' | ')],
+    ['name', C.name, ''], ['role', C.role, ''], ['clients', (C.clients || []).join(' | '), ''], ['disciplines', (C.disciplines || []).join(' | '), (EC.disciplines || []).join(' | ')],
     ['substack', C.substack, ''], ['linkedin', C.linkedin, ''], ['email', C.email, ''], ['date', C.date, '']
   ]);
   var dict = (d.i18n && d.i18n.es) || {};
