@@ -543,6 +543,9 @@ window.HN_CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbyycJ9eKe
 .hero-d .hn-btn.outline{border-color:#F4F4EE;color:#F4F4EE}
 .hero-d .hn-btn.outline:hover{background:#F4F4EE;color:#222}
 .signal{border-top:1px solid rgba(244,244,238,.18)}
+/* Spanish words are longer: keep big page titles clear of the corner texture */
+html[lang="es"] .phead h1{font-size:clamp(40px,7.2vw,140px);overflow-wrap:break-word}
+html[lang="es"] .phead:has(.corner) h1{max-width:64%}
 .lang{display:flex;border:1px solid var(--hn-deep-space);flex:none}
 .lang button{font:500 11px/1 var(--font-mono);letter-spacing:var(--tracking-meta);padding:9px 10px;border:0;background:transparent;color:inherit;cursor:pointer}
 .lang button.on{background:var(--hn-deep-space);color:var(--hn-yellow)}
