@@ -32,8 +32,12 @@ TRN = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(TRN)
 assert len(TRN.CASES) == len(data["projects"]), "CASES must match the number of projects"
 data["es"] = TRN.ES
 data["i18n"] = {"es": TRN.DICT}
+BODIES_ES = json.loads((HERE / "src" / "case_bodies_es.json").read_text(encoding="utf8"))  # {slug: html_es}
 for _p, (_t, _s) in zip(data["projects"], TRN.CASES):
     _p["es"] = {"title": _t, "sub": _s}
+    if BODIES_ES.get(_p["slug"]):
+        assert len(BODIES_ES[_p["slug"]]) <= 49000, "html_es too long for a Sheets cell: " + _p["slug"]
+        _p["es"]["html"] = BODIES_ES[_p["slug"]]
 
 HERO_PHRASES = ["see what we couldn't see before.", "change course.", "question the rules we were given.", "do things differently.",
   "turn limits into possibilities.", "imagine other futures.", "let something new emerge.", "discover new possibilities.",
@@ -226,7 +230,7 @@ J = lambda a: " | ".join(a)
 sheet("Projects",
       ["order", "status", "slug", "title", "sub", "year", "client", "industry", "type", "role", "country", "highlight", "link", "texture", "cover", "excerpt", "body_html", "title_es", "sub_es", "excerpt_es", "body_html_es"],
       [[n + 1, p["status"], p["slug"], p["title"], p["sub"], p["year"], J(p["client"]), J(p["industry"]), J(p["type"]), J(p["role"]), J(p["country"]),
-        bool(p["highlight"]), p["link"], p["texture"], p.get("cover", ""), p["excerpt"], p["html"], p["es"].get("title", ""), p["es"].get("sub", ""), "", ""] for n, p in enumerate(data["projects"])],
+        bool(p["highlight"]), p["link"], p["texture"], p.get("cover", ""), p["excerpt"], p["html"], p["es"].get("title", ""), p["es"].get("sub", ""), "", p["es"].get("html", "")] for n, p in enumerate(data["projects"])],
       [7, 11, 34, 44, 44, 7, 24, 22, 22, 26, 16, 10, 24, 11, 40, 50, 60, 44, 44, 40, 60], first=True)
 A, B, T, H = data["pages"]["approach"], data["pages"]["about"], data["pages"]["thinking"], data["pages"]["home"]
 ESP = data["es"]["pages"]
