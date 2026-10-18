@@ -22,7 +22,8 @@ async function fetchPosts(){
 }
 function render(box, posts){
   if (!posts.length){ box.innerHTML = ""; return; }
-  box.innerHTML = `<p class="t-meta posts-n">${String(posts.length).padStart(2, "0")} articles</p><div class="cards">` + posts.map((p, i) => {
+  const home = box.id === "home-posts"; if (home) posts = posts.slice(0, 3);
+  box.innerHTML = (home ? "" : `<p class="t-meta posts-n">${String(posts.length).padStart(2, "0")} articles</p>`) + `<div class="cards">` + posts.map((p, i) => {
     const m = ["rings", "lines", "dots"][i % 3];
     const media = p.image ? `<img class="duo" referrerpolicy="no-referrer" src="${esc(p.image)}" alt="" loading="lazy" data-k="card" data-t="${TEX[i % TEX.length]}" data-s="${i + 3}">`
                           : `<canvas class="ht" data-m="${m}" data-seed="${i + 3}"></canvas>`;
@@ -35,7 +36,7 @@ function render(box, posts){
   box.querySelectorAll("canvas.ht").forEach(c => io.observe(c));
 }
 async function initPosts(){
-  const box = document.querySelector("#app #posts"); if (!box) return;
+  const box = document.querySelector("#app #posts, #app #home-posts"); if (!box) return;
   let cached = null; try { cached = JSON.parse(localStorage.getItem(KEY) || "null"); } catch(e){}
   if (cached && cached.length) render(box, cached); else box.innerHTML = `<p class="t-meta">Loading articles…</p>`;
   try {
@@ -48,6 +49,6 @@ async function initPosts(){
   }
 }
 window.initPosts = initPosts;
-window.addEventListener("hn-lang", () => { try { const c = JSON.parse(localStorage.getItem(KEY) || "null"); const box = document.querySelector("#app #posts"); if (box && c) render(box, c); } catch(e){} });
+window.addEventListener("hn-lang", () => { try { const c = JSON.parse(localStorage.getItem(KEY) || "null"); const box = document.querySelector("#app #posts, #app #home-posts"); if (box && c) render(box, c); } catch(e){} });
 initPosts();
 })();

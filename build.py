@@ -126,6 +126,32 @@ html = html.replace(HDR_OLD, '</nav>\n    <div class="lang" role="group" aria-la
 html = html.replace(' window.initPosts && initPosts();', ' window.initPosts && initPosts(); i18nDom();', 1)
 html = html.replace('addEventListener("hashchange", route);', 'addEventListener("hashchange", route);\ndocument.querySelector(".lang").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setLang(b.dataset.l); });\ndocument.querySelectorAll(".lang button").forEach(b => { b.classList.toggle("on", b.dataset.l === LANG); b.setAttribute("aria-pressed", b.dataset.l === LANG); });', 1)
 
+MEAN = """</div>
+  <section class="mean-s s-matter">
+    <div class="mean-st">
+      <canvas aria-hidden="true"></canvas>
+      <div class="mean-in wrap">
+        <div class="mean-l">
+          <span class="t-meta mean-k">02 — What is HIPERNOVA?</span>
+          <p class="mean-p">A hypernova is a concentration of energy capable of altering what surrounds it. I'm not interested in the astronomical phenomenon, but in its behavior.</p>
+          <div class="mean-card"><span class="t-meta hl" data-mm="count">Signal — 00 / 06</span><p class="mean-t" data-mm="title"></p><p class="mean-d" data-mm="text"></p></div>
+        </div>
+        <ul class="mean-words" data-mm="words"></ul>
+      </div>
+    </div>
+  </section>
+  <section class="s-matter mean-band"><div class="wrap"><p><span class="mean-dim">My intention isn't to produce change.</span> <span class="hl">It's to alter trajectories.</span></p></div></section>
+  <div class="wrap">
+    ${sec(3, "Latest writing", `<h2>From the Substack.</h2><div class="posts" id="home-posts"></div><div class="btns">${btn("#/thinking", "All writing")}</div>`)}
+    """
+H_OLD = '${sec(2, "Practice"'
+assert H_OLD in html, "home practice anchor"
+html = html.replace(H_OLD, MEAN + '${sec(4, "Practice"', 1)
+for o, n in [('${sec(3, "Principles"', '${sec(5, "Principles"'), ('${sec(4, "Clients & partners"', '${sec(6, "Clients & partners"'), ('<span class="t-meta">05 — Next</span>', '<span class="t-meta">07 — Next</span>')]:
+    assert o in html, o
+    html = html.replace(o, n, 1)
+html = html.replace(' window.initMethod && initMethod();', ' window.initMethod && initMethod(); window.initMeaning && initMeaning();', 1)
+
 # cover photo (duotone) in cards and case band; texture stays as fallback
 CARD_OLD = '<canvas class="ht" data-m="${MOTIF[p.texture] || "dots"}" data-seed="${P.indexOf(p) + 3}"></canvas>'
 CARD_NEW = '${p.cover ? `<img class="duo" referrerpolicy="no-referrer" src="${esc(p.cover)}" alt="" loading="lazy" data-k="card" data-t="${esc(p.texture)}" data-s="${P.indexOf(p) + 3}">` : `' + CARD_OLD + '`}'
@@ -176,6 +202,23 @@ html[lang="es"] .phead:has(.corner) h1{max-width:64%}
 .no-es{font:400 14px/1.5 var(--font-mono);opacity:.7;border-left:3px solid var(--hn-yellow);padding-left:12px}
 .posts{margin-top:56px}.posts-n{margin:0 0 16px}
 .signal-in>div:nth-child(1){grid-column:1/-1;display:flex;gap:28px 48px;flex-wrap:wrap}
+/* ---------- home › what is hipernova ---------- */
+.mean-s{position:relative;height:340vh}
+.mean-st{position:sticky;top:72px;height:calc(100vh - 72px);overflow:hidden}
+.mean-st canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mean-in{position:relative;z-index:1;height:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:32px;align-content:space-between;padding-top:clamp(32px,5vw,64px);padding-bottom:clamp(32px,5vw,64px);pointer-events:none}
+.mean-l{display:grid;gap:20px;align-content:start;max-width:38ch}
+.mean-k{color:#D7D7D7}
+.mean-p{margin:0;font:400 clamp(16px,1.3vw,19px)/1.5 var(--font-body);text-wrap:pretty}
+.mean-card{border-top:1px solid rgba(244,244,238,.3);padding-top:20px;margin-top:12px;display:grid;gap:12px;min-height:150px;align-content:start}
+.mean-t{margin:0;font:700 clamp(22px,2vw,28px)/1.1 var(--font-display);letter-spacing:-.02em;color:var(--hn-yellow)}
+.mean-d{margin:0;font:400 clamp(16px,1.3vw,18px)/1.5 var(--font-body);text-wrap:pretty}
+.mean-words{list-style:none;margin:0;padding:0;align-self:end;justify-self:end;text-align:right;display:grid}
+.mean-words li{font:700 clamp(28px,min(7vw,10.5vh),124px)/.92 var(--font-display);letter-spacing:-.04em;text-transform:uppercase;transition:color .6s var(--ease-field),transform .6s var(--ease-field)}
+.mean-band{border-top:1px solid rgba(244,244,238,.14);padding:clamp(72px,10vw,150px) 0}
+.mean-band p{margin:0;font:700 clamp(36px,5.6vw,96px)/.98 var(--font-display);letter-spacing:-.035em;text-wrap:balance}
+.mean-dim{color:#D7D7D7;font-weight:500}
+@media (max-width:900px){.mean-words li{font-size:clamp(24px,min(9vw,7.5vh),64px)}.mean-p{font-size:15px}.mean-card{min-height:120px}}
 /* ---------- approach › method ---------- */
 .method-in{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:clamp(56px,7vw,112px);align-items:center;padding-top:clamp(80px,11vw,160px);padding-bottom:clamp(80px,11vw,160px)}
 .method-l{display:grid;gap:32px;align-content:start}
@@ -196,7 +239,7 @@ html[lang="es"] .phead:has(.corner) h1{max-width:64%}
 .method-node:hover:not(.on){background:#F4F4EE;color:#222}
 """
 hero_js = (HERE / "src" / "hero.js").read_text(encoding="utf8").replace("/*PHRASES*/[]", json.dumps(HERO_PHRASES, ensure_ascii=False))
-js = (HERE / "src" / "admin.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "duo.js").read_text(encoding="utf8") + "\n" + hero_js + "\n" + (HERE / "src" / "method.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "posts.js").read_text(encoding="utf8")
+js = (HERE / "src" / "admin.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "duo.js").read_text(encoding="utf8") + "\n" + hero_js + "\n" + (HERE / "src" / "method.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "posts.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "meaning.js").read_text(encoding="utf8")
 import base64
 FAV = "data:image/png;base64," + base64.b64encode((HERE / "favicon.png").read_bytes()).decode()
 html = html.replace("</head>", '<link rel="icon" type="image/png" href="' + FAV + '">\n<link rel="apple-touch-icon" href="' + FAV + '">\n</head>', 1)
