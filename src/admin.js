@@ -23,7 +23,7 @@ const q = (s, r = document) => r.querySelector(s);
 const qa = (s, r = document) => [...r.querySelectorAll(s)];
 const ea = s => String(s ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 const et = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-const ADM = {open:false, tab:"cases", editing:null, data:null, dirty:false, token:SS.get("hn_tok") || null, busy:false};
+const ADM = {lang:"en", open:false, tab:"cases", editing:null, data:null, dirty:false, token:SS.get("hn_tok") || null, busy:false};
 
 /* ---------------------------------------------------------------- API */
 async function api(payload){
@@ -40,8 +40,13 @@ function normalize(d){
     p.texture = TEXTURES.includes(p.texture) ? p.texture : "halftone"; p.cover = p.cover || "";
     return p;
   });
+  d.es = d.es || {}; d.es.config = d.es.config || {}; d.es.pages = d.es.pages || {};
+  ["home","approach","about","thinking"].forEach(k => d.es.pages[k] = d.es.pages[k] || {});
+  d.projects.forEach(p => p.es = p.es || {});
+  d.i18n = d.i18n || {}; d.i18n.es = Object.assign({}, HN_DICT, d.i18n.es || {});
   d.config = d.config || {}; d.pages = d.pages || {};
   ["home","approach","about","thinking"].forEach(k => d.pages[k] = d.pages[k] || {});
+  d.pages.home.phrases = d.pages.home.phrases || []; d.pages.home.hero = d.pages.home.hero || "";
   const A = d.pages.approach, B = d.pages.about, T = d.pages.thinking;
   A.principles = A.principles || []; B.experience = B.experience || [];
   ["education","certifications","disciplines"].forEach(k => B[k] = B[k] || []);
@@ -89,7 +94,11 @@ function uniqueSlug(base, except){
   return s;
 }
 const getPath = (o, path) => path.split(".").reduce((a, k) => a == null ? a : a[k], o);
-function setPath(o, path, v){ const ks = path.split("."), last = ks.pop(); const t = ks.reduce((a, k) => a[k], o); t[last] = v; }
+function setPath(o, path, v){
+  const ks = path.split("."), last = ks.pop(); let t = o;
+  ks.forEach((k, i) => { const nxt = (ks[i + 1] !== undefined ? ks[i + 1] : last); if (t[k] == null) t[k] = /^\d+$/.test(nxt) ? [] : {}; t = t[k]; });
+  t[last] = v;
+}
 function markDirty(on = true){
   ADM.dirty = on;
   const s = q("#adm-status"); if (s){ s.textContent = on ? "● Unsaved changes" : "All changes saved"; s.classList.toggle("dirty", on); }
@@ -219,13 +228,14 @@ function edHTML(){
 }
 let saveT;
 function changed(){
-  fixBlocks(); flagEmpty(); positionPlus();
+  ED.touched = true; fixBlocks(); flagEmpty(); positionPlus();
   clearTimeout(saveT); saveT = setTimeout(commitBody, 250);
   markDirty();
 }
 function commitBody(){
   if (!ED.project || !ED.el) return;
-  ED.project.html = edHTML();
+  if (ADM.lang === "es"){ if (ED.touched){ ED.project.es = ED.project.es || {}; ED.project.es.html = edHTML(); } }
+  else ED.project.html = edHTML();
 }
 function currentBlock(){
   const s = getSelection(); if (!s.rangeCount) return null;
@@ -362,7 +372,7 @@ function viewCases(){
     <button class="hn-btn accent" data-act="new">New case</button></div>
     <div class="cl">${P.map((p, i) => `<div class="cl-r">
       <span class="n">${pad(i + 1)}</span>
-      <button class="tt" data-act="edit" data-i="${i}">${et(p.title || "Untitled")}</button>
+      <button class="tt" data-act="edit" data-i="${i}">${et(p.title || "Untitled")}${p.es && p.es.html ? ' <span class="st pub" style="font-size:9px;padding:3px 5px;cursor:default">ES</span>' : ""}</button>
       <span class="n yr">${p.year || "—"}</span>
       <span class="cc">${et(p.client.join(", ") || "—")}</span>
       <span class="stc"><button class="st ${p.status === "published" ? "pub" : "draft"}" data-act="status" data-i="${i}" title="Click to toggle">${p.status}</button></span>
@@ -375,13 +385,15 @@ function viewCases(){
       </span></div>`).join("")}</div>`;
 }
 function viewEditor(){
-  const p = ADM.data.projects[ADM.editing];
+  const p = ADM.data.projects[ADM.editing], ES = ADM.lang === "es", pe = p.es || {};
+  const lv = f => ES ? (pe[f] || "") : p[f], lph = (f, d) => ES ? (p[f] || d) : d;
   return `<div class="row-h"><button class="hn-btn sm outline" data-act="back">← All cases</button>
+      ${ES ? '<span class="st pub" style="cursor:default">Editing the Spanish version — empty fields show the English</span>' : ""}
       <span class="adm-status" style="opacity:.6">Case ${pad(ADM.editing + 1)} / ${pad(ADM.data.projects.length)}</span></div>
     <div class="ed-wrap">
       <div>
-        <textarea class="ed-title" rows="1" data-f="title" placeholder="Case title">${et(p.title)}</textarea>
-        <textarea class="ed-sub" rows="1" data-f="sub" placeholder="Subtitle — one line that frames the case">${et(p.sub)}</textarea>
+        <textarea class="ed-title" rows="1" data-f="title" placeholder="${ea(lph("title", "Case title"))}">${et(lv("title"))}</textarea>
+        <textarea class="ed-sub" rows="1" data-f="sub" placeholder="${ea(lph("sub", "Subtitle — one line that frames the case"))}">${et(lv("sub"))}</textarea>
         <div class="ed-tools" id="adm-tools">
           <button data-t="h2" title="Section heading">Section</button><button data-t="h3" title="Subhead">Subhead</button><button data-t="p" title="Normal text">Text</button><button data-t="quote" title="Quote block">Quote</button>
           <span class="sep"></span><button data-t="ul">• List</button><button data-t="ol">1. List</button>
@@ -406,18 +418,24 @@ function viewEditor(){
         <div class="fld"><label>Slug (URL)</label><input data-f="slug" value="${ea(p.slug)}"></div>
         ${[["client","Client"],["industry","Industry"],["type","Type"],["role","Role"],["country","Country"]].map(([k, l]) => `<div class="fld"><span class="l">${l}</span><div id="chips-${k}">${chipsHTML(k, p[k])}</div></div>`).join("")}
         <div class="fld"><label>External link (optional)</label><input data-f="link" value="${ea(p.link)}" placeholder="https://"></div>
-        <div class="fld"><label>Card excerpt</label><textarea rows="4" data-f="excerpt" placeholder="Empty = generated from the first paragraph">${et(p.excerpt)}</textarea></div>
+        <div class="fld"><label>Card excerpt</label><textarea rows="4" data-f="excerpt" placeholder="${ea(lph("excerpt", "Empty = generated from the first paragraph"))}">${et(lv("excerpt"))}</textarea></div>
       </aside>
     </div>
     <div class="bub" id="adm-bub"><button data-t="b"><b>B</b></button><button data-t="i"><i>I</i></button><button data-t="link">Link</button><button data-t="h2">H2</button><button data-t="h3">H3</button><button data-t="quote">Quote</button><button data-t="ul">• List</button></div>
     <div class="plusmenu" id="adm-plusmenu"><button data-t="img">Image</button><button data-t="video">Video</button><button data-t="h2">Section heading</button><button data-t="h3">Subhead</button><button data-t="quote">Quote</button><button data-t="ul">Bullet list</button><button data-t="ol">Numbered list</button></div>`;
 }
+const NOT_TRANSLATED = /^(config\.(name|role|email|linkedin|substack)|pages\.thinking\.publications)$/;
 const F = (label, path, o = {}) => {
-  const v = getPath(ADM.data, path), lines = Array.isArray(v), val = lines ? v.join("\n") : (v ?? "");
-  const area = o.area || lines;
-  return `<div class="fld"><label>${label}</label>${area ? `<textarea rows="${o.rows || (lines ? 5 : 3)}" data-bind="${path}" ${lines ? 'data-kind="lines"' : ""}>${et(val)}</textarea>` : `<input data-bind="${path}" value="${ea(val)}" placeholder="${ea(o.ph || "")}">`}${o.hint ? `<span class="hint">${o.hint}</span>` : ""}</div>`;
+  const ES = ADM.lang === "es"; if (ES && NOT_TRANSLATED.test(path)) return "";
+  const base = getPath(ADM.data, path), lines = Array.isArray(base);
+  const bind = ES ? "es." + path : path, v = ES ? getPath(ADM.data, bind) : base;
+  const val = Array.isArray(v) ? v.join("\n") : (v ?? ""), area = o.area || lines;
+  const ph = ES ? (Array.isArray(base) ? base.join("\n") : (base || "")) : (o.ph || "");
+  return `<div class="fld"><label>${label}${ES ? " · ES" : ""}</label>${area ? `<textarea rows="${o.rows || (lines ? 5 : 3)}" data-bind="${bind}" ${lines ? 'data-kind="lines"' : ""} placeholder="${ea(ph)}">${et(val)}</textarea>` : `<input data-bind="${bind}" value="${ea(val)}" placeholder="${ea(ph)}">`}${o.hint ? `<span class="hint">${o.hint}</span>` : ""}</div>`;
 };
 function listEditor(list, pathBase, rows){
+  if (ADM.lang === "es") return rows.map((r, i) => `<div class="card-box"><div class="top"><span class="t-meta">${pad(i + 1)} — ES</span></div>
+    ${F("Title", `${pathBase}.${i}.0`)}${F("Text", `${pathBase}.${i}.1`, {area:true, rows:4})}</div>`).join("");
   return rows.map((r, i) => `<div class="card-box"><div class="top"><span class="t-meta">${pad(i + 1)} —</span><span class="cl-act">
     <button class="ib" data-act="lop" data-op="up" data-list="${list}" data-i="${i}">▲</button><button class="ib" data-act="lop" data-op="down" data-list="${list}" data-i="${i}">▼</button><button class="ib" data-act="lop" data-op="del" data-list="${list}" data-i="${i}">Del</button></span></div>
     ${F("Title", `${pathBase}.${i}.0`)}${F(list === "principles" ? "Text" : "Text (HTML allowed: &lt;strong&gt;, &lt;a&gt;)", `${pathBase}.${i}.1`, {area:true, rows:4})}
@@ -429,11 +447,11 @@ function viewSite(){
   <h2 class="sh">Identity & contact</h2><div class="g2">${F("Name", "config.name")}${F("Role", "config.role")}</div>
   ${F("Disciplines (one per line)", "config.disciplines")}
   <div class="g2">${F("Email", "config.email", {ph:"you@email.com", hint:"Shows the “Write to me” button when filled"})}${F("LinkedIn URL", "config.linkedin")}</div>${F("Substack URL", "config.substack")}
-  <h2 class="sh">Home</h2>${F("Lead (hero)", "pages.home.lead", {area:true, rows:2})}${F("Bio (Practice section)", "pages.home.bio", {area:true, rows:5})}
+  <h2 class="sh">Home</h2>${F("Hero headline (static line)", "pages.home.hero", {ph:"I help people, brands and organizations to"})}${F("Hero phrases (one per line — they rotate after the headline)", "pages.home.phrases", {rows:10})}${F("Bio (Practice section)", "pages.home.bio", {area:true, rows:5})}
   <h2 class="sh">Approach</h2>${F("Lead", "pages.approach.lead", {area:true, rows:4})}
-  <div class="row-h"><span class="t-meta">Principles</span><button class="hn-btn sm" data-act="ladd" data-list="principles">Add principle</button></div>${listEditor("principles", "pages.approach.principles", D.pages.approach.principles)}
+  <div class="row-h"><span class="t-meta">Principles</span>${ADM.lang === "es" ? "" : '<button class="hn-btn sm" data-act="ladd" data-list="principles">Add principle</button>'}</div>${listEditor("principles", "pages.approach.principles", D.pages.approach.principles)}
   <h2 class="sh">About</h2>${F("Intro", "pages.about.intro", {area:true, rows:5})}${F("Quote / belief (format: “Statement — Highlight. Rest of text.”)", "pages.about.quote", {area:true, rows:4})}
-  <div class="row-h"><span class="t-meta">Experience</span><button class="hn-btn sm" data-act="ladd" data-list="experience">Add block</button></div>${listEditor("experience", "pages.about.experience", D.pages.about.experience)}
+  <div class="row-h"><span class="t-meta">Experience</span>${ADM.lang === "es" ? "" : '<button class="hn-btn sm" data-act="ladd" data-list="experience">Add block</button>'}</div>${listEditor("experience", "pages.about.experience", D.pages.about.experience)}
   ${F("Education (one per line)", "pages.about.education")}${F("Certifications (one per line)", "pages.about.certifications")}${F("Disciplines & frameworks (one per line)", "pages.about.disciplines")}${F("Teaching", "pages.about.teaching", {area:true, rows:3})}
   <h2 class="sh">Thinking</h2>${F("Lead", "pages.thinking.lead", {area:true, rows:3})}${F("Substack blurb", "pages.thinking.substack", {area:true, rows:4})}${F("Medium / IxDF blurb", "pages.thinking.medium", {area:true, rows:2})}
   ${F("Publications (one per line, HTML allowed)", "pages.thinking.publications", {rows:8})}`;
@@ -441,12 +459,13 @@ function viewSite(){
 function render(){
   const root = q("#adm-body"); if (!root) return;
   q("#adm").classList.toggle("open", ADM.open);
+  qa(".adm-lang button").forEach(b => b.classList.toggle("on", b.dataset.alang === ADM.lang));
   qa(".adm-tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === ADM.tab && ADM.editing == null));
   if (ADM.tab === "site"){ root.innerHTML = viewSite(); }
   else if (ADM.editing != null){
     root.innerHTML = viewEditor();
     ED.el = q("#adm-ed"); ED.project = ADM.data.projects[ADM.editing]; ED.range = null;
-    loadIntoEditor(ED.project.html); bindEditor(); autosize();
+    ED.touched = false; loadIntoEditor(ADM.lang === "es" ? ((ED.project.es && ED.project.es.html) || ED.project.html) : ED.project.html); bindEditor(); autosize();
   } else { root.innerHTML = viewCases(); ED.el = null; ED.project = null; }
   q("#adm").scrollTop = 0; barH();
 }
@@ -461,6 +480,7 @@ function buildShell(){
     <div class="adm-bar s-matter">
       <span class="brand-a">Hipernova <span class="hl">/ Admin</span></span>
       <div class="adm-tabs"><button data-tab="cases">Cases</button><button data-tab="site">Site texts</button></div>
+      <div class="lang adm-lang" role="group" aria-label="Editing language" title="Language you are editing"><button data-alang="en">EN</button><button data-alang="es">ES</button></div>
       <span class="adm-sp"></span>
       <span class="adm-status" id="adm-status">All changes saved</span>
       <button class="hn-btn sm outline" data-act="preview">Preview site</button>
@@ -518,7 +538,8 @@ function swap(arr, i, j){ if (j < 0 || j >= arr.length) return; [arr[i], arr[j]]
 const blank = list => list === "principles" ? ["New principle", "Describe it in two sentences.", "nucleo"] : ["New block", "Describe it."];
 const listRef = l => l === "principles" ? ADM.data.pages.approach.principles : ADM.data.pages.about.experience;
 async function onClick(e){
-  const t = e.target.closest("[data-act],[data-tab],[data-t]"); if (!t) return;
+  const t = e.target.closest("[data-act],[data-tab],[data-t],[data-alang]"); if (!t) return;
+  if (t.dataset.alang){ commitBody(); ADM.lang = t.dataset.alang; return render(); }
   if (t.dataset.tab){ commitBody(); ADM.tab = t.dataset.tab; ADM.editing = null; return render(); }
   if (t.dataset.t){ e.preventDefault(); q("#adm-plusmenu").classList.remove("open"); return runTool(t.dataset.t); }
   const act = t.dataset.act, i = +t.dataset.i, P = ADM.data.projects;
@@ -555,6 +576,7 @@ function onInput(e){
     const p = ADM.data.projects[ADM.editing], f = el.dataset.f;
     let v = el.type === "checkbox" ? el.checked : el.value;
     if (f === "year") v = v === "" ? null : +v;
+    if (ADM.lang === "es" && (f === "title" || f === "sub" || f === "excerpt")){ p.es = p.es || {}; p.es[f] = v; if (el.classList.contains("ed-title") || el.classList.contains("ed-sub")) autosize(); return markDirty(); }
     p[f] = v;
     if (f === "title" && p._auto){ p.slug = uniqueSlug(v || "case", p); const s = q('[data-f="slug"]'); if (s) s.value = p.slug; }
     if (f === "slug"){ p._auto = false; }

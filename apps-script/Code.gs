@@ -15,17 +15,19 @@
 var TOKEN_TTL = 6 * 60 * 60; // seconds
 
 var SCHEMA = {
-  Projects:   ['order','status','slug','title','sub','year','client','industry','type','role','country','highlight','link','texture','cover','excerpt','body_html'],
-  Principles: ['order','title','text','symbol'],
-  Experience: ['order','title','html'],
-  Pages:      ['key','value'],
-  Config:     ['key','value']
+  Projects:   ['order','status','slug','title','sub','year','client','industry','type','role','country','highlight','link','texture','cover','excerpt','body_html','title_es','sub_es','excerpt_es','body_html_es'],
+  Principles: ['order','title','text','symbol','title_es','text_es'],
+  Experience: ['order','title','html','title_es','html_es'],
+  Pages:      ['key','value','value_es'],
+  Config:     ['key','value','value_es'],
+  Translations: ['en','es']
 };
 
 /* ------------------------------------------------------------ endpoints */
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'read';
   if (action === 'read') return json_(readAll_(false));
+  if (action === 'posts') return json_({posts: posts_()});
   return json_({error: 'unknown action'});
 }
 
@@ -121,13 +123,30 @@ function readAll_(includeDrafts) {
       role: list_(r.role, '|'), country: list_(r.country, '|'),
       highlight: bool_(r.highlight), link: String(r.link || ''), texture: String(r.texture || 'halftone'),
       cover: String(r.cover || ''), excerpt: String(r.excerpt || ''), html: String(r.body_html || ''),
-      status: String(r.status).toLowerCase() === 'draft' ? 'draft' : 'published'
+      status: String(r.status).toLowerCase() === 'draft' ? 'draft' : 'published',
+      es: {title: String(r.title_es || ''), sub: String(r.sub_es || ''), excerpt: String(r.excerpt_es || ''), html: String(r.body_html_es || '')}
     };
   });
 
-  var pg = {}, cf = {};
-  rows_('Pages').forEach(function (r) { pg[String(r.key)] = str_(r.value); });
-  rows_('Config').forEach(function (r) { cf[String(r.key)] = str_(r.value); });
+  var pg = {}, cf = {}, pe = {}, ce = {};
+  rows_('Pages').forEach(function (r) { pg[String(r.key)] = str_(r.value); pe[String(r.key)] = str_(r.value_es); });
+  rows_('Config').forEach(function (r) { cf[String(r.key)] = str_(r.value); ce[String(r.key)] = str_(r.value_es); });
+  var princ = byOrder_(rows_('Principles')), exper = byOrder_(rows_('Experience')), dict = {};
+  rows_('Translations').forEach(function (r) { if (r.en && r.es) dict[String(r.en)] = String(r.es); });
+  var es = {
+    config: {disciplines: list_(ce.disciplines, '|')},
+    pages: {
+      home: {hero: pe['home.hero'] || '', phrases: list_(pe['home.phrases'], '\n'), bio: pe['home.bio'] || ''},
+      approach: {lead: pe['approach.lead'] || '', principles: princ.map(function (r) { return [String(r.title_es || ''), String(r.text_es || '')]; })},
+      about: {
+        intro: pe['about.intro'] || '', quote: pe['about.quote'] || '',
+        experience: exper.map(function (r) { return [String(r.title_es || ''), String(r.html_es || '')]; }),
+        education: list_(pe['about.education'], '\n'), certifications: list_(pe['about.certifications'], '\n'),
+        disciplines: list_(pe['about.disciplines'], '\n'), teaching: pe['about.teaching'] || ''
+      },
+      thinking: {lead: pe['thinking.lead'] || '', substack: pe['thinking.substack'] || '', medium: pe['thinking.medium'] || ''}
+    }
+  };
 
   return {
     config: {
@@ -135,14 +154,14 @@ function readAll_(includeDrafts) {
       substack: cf.substack || '', linkedin: cf.linkedin || '', email: cf.email || '', date: cf.date || ''
     },
     pages: {
-      home: {lead: pg['home.lead'] || '', bio: pg['home.bio'] || ''},
+      home: {lead: pg['home.lead'] || '', bio: pg['home.bio'] || '', hero: pg['home.hero'] || '', phrases: list_(pg['home.phrases'], '\n')},
       approach: {
         lead: pg['approach.lead'] || '',
-        principles: byOrder_(rows_('Principles')).map(function (r) { return [String(r.title), String(r.text), String(r.symbol || 'nucleo')]; })
+        principles: princ.map(function (r) { return [String(r.title), String(r.text), String(r.symbol || 'nucleo')]; })
       },
       about: {
         intro: pg['about.intro'] || '', quote: pg['about.quote'] || '',
-        experience: byOrder_(rows_('Experience')).map(function (r) { return [String(r.title), String(r.html)]; }),
+        experience: exper.map(function (r) { return [String(r.title), String(r.html)]; }),
         education: list_(pg['about.education'], '\n'), certifications: list_(pg['about.certifications'], '\n'),
         disciplines: list_(pg['about.disciplines'], '\n'), teaching: pg['about.teaching'] || ''
       },
@@ -151,8 +170,38 @@ function readAll_(includeDrafts) {
         publications: list_(pg['thinking.publications'], '\n')
       }
     },
-    projects: projects
+    projects: projects,
+    es: es,
+    i18n: {es: dict}
   };
+}
+
+/* ------------------------------------------------------------ Substack articles (public, cached 1 h) */
+/** Reads the whole Substack archive server-side (browsers can't: no CORS). Uses Config → substack, default below. */
+function posts_() {
+  var cache = CacheService.getScriptCache(), hit = cache.get('posts_v1');
+  if (hit) return JSON.parse(hit);
+  var cf = {};
+  rows_('Config').forEach(function (r) { cf[String(r.key)] = str_(r.value); });
+  var base = String(cf.substack || 'https://hipernova.substack.com').replace(/\/+$/, '');
+  var out = [], offset = 0;
+  while (offset < 1000) {
+    var res = UrlFetchApp.fetch(base + '/api/v1/archive?sort=new&limit=50&offset=' + offset, {muteHttpExceptions: true});
+    if (res.getResponseCode() !== 200) break;
+    var arr = JSON.parse(res.getContentText());
+    arr.forEach(function (p) {
+      if (p.type === 'thread' || !p.canonical_url) return;
+      out.push({
+        title: String(p.title || ''), description: String(p.subtitle || p.description || '').slice(0, 240),
+        image: String(p.cover_image || ''), url: String(p.canonical_url), date: String(p.post_date || '')
+      });
+    });
+    if (arr.length < 50) break;
+    offset += 50;
+  }
+  var s = JSON.stringify(out);
+  if (out.length && s.length < 95000) cache.put('posts_v1', s, 3600);
+  return out;
 }
 
 /* ------------------------------------------------------------ write */
@@ -194,27 +243,35 @@ function saveAll_(d) {
     return [i + 1, p.status === 'draft' ? 'draft' : 'published', p.slug, p.title, p.sub || '', p.year || '',
       (p.client || []).join(' | '), (p.industry || []).join(' | '), (p.type || []).join(' | '),
       (p.role || []).join(' | '), (p.country || []).join(' | '), !!p.highlight, p.link || '',
-      p.texture || 'halftone', p.cover || '', p.excerpt || '', p.html || ''];
+      p.texture || 'halftone', p.cover || '', p.excerpt || '', p.html || '',
+      (p.es && p.es.title) || '', (p.es && p.es.sub) || '', (p.es && p.es.excerpt) || '', (p.es && p.es.html) || ''];
   });
   var A = d.pages.approach, B = d.pages.about, T = d.pages.thinking, H = d.pages.home, C = d.config;
   var j = function (a) { return (a || []).join('\n'); };
+  var E = d.es || {}, EP = (E.pages || {}), EH = EP.home || {}, EA = EP.approach || {}, EB = EP.about || {}, ET = EP.thinking || {}, EC = E.config || {};
+  var eprin = EA.principles || [], eexp = EB.experience || [];
 
   // snapshot before overwriting (kept in a "Backup" tab, one copy: the previous save)
   backup_();
 
   overwrite_('Projects', proj);
-  overwrite_('Principles', (A.principles || []).map(function (x, i) { return [i + 1, x[0], x[1], x[2]]; }));
-  overwrite_('Experience', (B.experience || []).map(function (x, i) { return [i + 1, x[0], x[1]]; }));
+  overwrite_('Principles', (A.principles || []).map(function (x, i) { var e = eprin[i] || []; return [i + 1, x[0], x[1], x[2], e[0] || '', e[1] || '']; }));
+  overwrite_('Experience', (B.experience || []).map(function (x, i) { var e = eexp[i] || []; return [i + 1, x[0], x[1], e[0] || '', e[1] || '']; }));
   overwrite_('Pages', [
-    ['home.lead', H.lead], ['home.bio', H.bio], ['approach.lead', A.lead],
-    ['about.intro', B.intro], ['about.quote', B.quote], ['about.education', j(B.education)],
-    ['about.certifications', j(B.certifications)], ['about.disciplines', j(B.disciplines)], ['about.teaching', B.teaching],
-    ['thinking.lead', T.lead], ['thinking.substack', T.substack], ['thinking.medium', T.medium], ['thinking.publications', j(T.publications)]
+    ['home.lead', H.lead, ''], ['home.bio', H.bio, EH.bio || ''], ['home.hero', H.hero || '', EH.hero || ''],
+    ['home.phrases', j(H.phrases), j(EH.phrases)], ['approach.lead', A.lead, EA.lead || ''],
+    ['about.intro', B.intro, EB.intro || ''], ['about.quote', B.quote, EB.quote || ''],
+    ['about.education', j(B.education), j(EB.education)], ['about.certifications', j(B.certifications), j(EB.certifications)],
+    ['about.disciplines', j(B.disciplines), j(EB.disciplines)], ['about.teaching', B.teaching, EB.teaching || ''],
+    ['thinking.lead', T.lead, ET.lead || ''], ['thinking.substack', T.substack, ET.substack || ''],
+    ['thinking.medium', T.medium, ET.medium || ''], ['thinking.publications', j(T.publications), '']
   ]);
   overwrite_('Config', [
-    ['name', C.name], ['role', C.role], ['disciplines', (C.disciplines || []).join(' | ')],
-    ['substack', C.substack], ['linkedin', C.linkedin], ['email', C.email], ['date', C.date]
+    ['name', C.name, ''], ['role', C.role, ''], ['disciplines', (C.disciplines || []).join(' | '), (EC.disciplines || []).join(' | ')],
+    ['substack', C.substack, ''], ['linkedin', C.linkedin, ''], ['email', C.email, ''], ['date', C.date, '']
   ]);
+  var dict = (d.i18n && d.i18n.es) || {};
+  overwrite_('Translations', Object.keys(dict).map(function (k) { return [k, dict[k]]; }));
 }
 
 /** Keeps the previous version of the whole database as JSON text in a hidden "Backup" tab. */

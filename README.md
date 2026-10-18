@@ -41,6 +41,15 @@ Cada vez que cambies `Code.gs`: *Implementar → Gestionar implementaciones → 
 - **Site texts:** textos de Home, Approach (principios), About, Thinking y datos de contacto. Si llenas `email`, aparece el botón “Write to me”.
 - **Save to Sheets** (o ⌘/Ctrl+S) escribe todo en el Sheet. También puedes editar el Sheet a mano: la columna `order` manda el orden, `status` = `draft` oculta un caso.
 
+## Español / English
+
+- El selector **EN | ES** está en el encabezado del sitio (recuerda la elección; también acepta `?lang=es`).
+- **Textos fijos y etiquetas** (menús, botones, industrias, tipos, roles): pestaña `Translations` del Sheet (`en` → `es`). Agrega o corrige filas ahí.
+- **Contenido**: columnas `_es` (`title_es`, `sub_es`, `body_html_es`, `value_es`…). Si una celda `_es` está vacía, se muestra el inglés. Un caso sin `body_html_es` muestra el aviso "disponible solo en inglés".
+- En el admin, el selector **EN | ES** de la barra elige qué versión editas (casos y Site texts).
+- Si el Sheet aún no tiene español, el sitio usa el español que viene incluido (textos, 47 títulos/subtítulos). **Los cuerpos de los 47 casos todavía están solo en inglés.**
+- Al actualizar `Code.gs` (nueva versión) los encabezados nuevos se agregan solos en el siguiente guardado.
+
 ## Límites conocidos de la PoC
 
 - **Seguridad:** los 5 clics solo esconden la puerta; la protección real es la contraseña validada en Apps Script (nunca está en el HTML). Apps Script tiene cuotas diarias; suficiente para un portafolio.

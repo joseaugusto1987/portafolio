@@ -113,3 +113,8 @@
 .cover-prev{display:grid;gap:8px;justify-items:start}
 .cover-prev .duo{width:100%;aspect-ratio:16/9;object-fit:cover;border:1px solid var(--hn-deep-space)}
 .cover-none{font:400 12px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg-2);border:1px dashed var(--hn-deep-space);padding:16px;width:100%}
+
+.adm .lang{border-color:#F4F4EE;margin:0 4px}
+.adm .lang button{color:#F4F4EE}
+.adm .lang button.on{background:var(--hn-yellow);color:#222}
+.adm .lang button:not(.on):hover{background:rgba(244,244,238,.18)}
