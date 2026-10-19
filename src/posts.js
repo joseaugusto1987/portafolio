@@ -12,10 +12,12 @@ const clip = (s, n) => { s = String(s || "").replace(/\s+/g, " ").trim(); return
 async function fetchPosts(){
   const api = window.HN_CONFIG && HN_CONFIG.API_URL, base = ((typeof C !== "undefined" && C.substack) || DEFAULT_SUBSTACK).replace(/\/+$/, "");
   if (api){
-    const r = await fetch(api + (api.includes("?") ? "&" : "?") + "action=posts&_=" + Math.floor(Date.now() / 600000));
-    const j = await r.json(); if (j && Array.isArray(j.posts) && j.posts.length) return j.posts;
+    try {
+      const r = await fetch(api + (api.includes("?") ? "&" : "?") + "action=posts&_=" + Math.floor(Date.now() / 600000));
+      const j = await r.json(); if (j && Array.isArray(j.posts) && j.posts.length) return j.posts;
+    } catch(e){ /* endpoint not authorized yet → fall back to the public feed */ }
   }
-  // fallback (demo mode / API without the posts action): public RSS → JSON (latest ~10)
+  // fallback: public RSS → JSON (latest ~10)
   const r = await fetch("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(base + "/feed"));
   const j = await r.json(); if (j.status !== "ok") throw new Error("feed");
   return j.items.map(it => ({title: it.title, description: clip(it.description.replace(/<[^>]+>/g, " "), 200), image: (it.enclosure && it.enclosure.link) || it.thumbnail || "", url: it.link, date: it.pubDate}));

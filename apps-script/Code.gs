@@ -13,7 +13,7 @@
  */
 
 var TOKEN_TTL = 6 * 60 * 60; // seconds
-var VERSION = '2026-10-19.2'; // bump when you change this file; the admin warns if the deployed version is older
+var VERSION = '2026-10-19.4'; // bump when you change this file; the admin warns if the deployed version is older
 
 var SCHEMA = {
   Projects:   ['order','status','slug','title','sub','year','client','industry','type','role','country','highlight','link','texture','cover','excerpt','body_html','title_es','sub_es','excerpt_es','body_html_es'],
@@ -92,8 +92,9 @@ function rows_(name) {
   for (var i = 1; i < vals.length; i++) {
     var o = {empty: true, _row: i};
     for (var c = 0; c < head.length; c++) {
-      o[head[c]] = vals[i][c];
-      if (vals[i][c] !== '' && vals[i][c] !== null) o.empty = false;
+      var cell = vals[i][c] === 'undefined' ? '' : vals[i][c];
+      o[head[c]] = cell;
+      if (cell !== '' && cell !== null) o.empty = false;
     }
     if (!o.empty) out.push(o);
   }
@@ -107,6 +108,7 @@ function byOrder_(arr) {
   });
 }
 function str_(v) {
+  if (v === undefined || v === null || v === 'undefined') return '';
   return Object.prototype.toString.call(v) === '[object Date]'
     ? Utilities.formatDate(v, Session.getScriptTimeZone(), 'dd.MM.yyyy') : String(v);
 }
@@ -299,6 +301,126 @@ function setup() { Object.keys(SCHEMA).forEach(sheet_); }
 function authorize() {
   var res = UrlFetchApp.fetch('https://hipernova.substack.com/api/v1/archive?limit=1', {muteHttpExceptions: true});
   Logger.log('Substack answered ' + res.getResponseCode() + '. Authorization OK.');
+}
+
+/* ============================================================ SHEET MENU (the Sheet is the database) ===== */
+/** Where the starter content lives (published with the site). Only EMPTY cells are ever filled from it. */
+var SEED_URL = 'https://joseaugusto1987.github.io/portafolio/database/seed.json';
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('HIPERNOVA')
+    .addItem('1 · Load starter content (Spanish + translations)', 'loadStarterContent')
+    .addItem('2 · Format the sheets', 'formatSheets')
+    .addItem('3 · Check the database', 'checkDatabase')
+    .addSeparator()
+    .addItem('Authorize Substack articles', 'authorize')
+    .addToUi();
+}
+
+function isEmpty_(v) { return v === null || v === undefined || v === '' || v === 'undefined' || (Object.prototype.toString.call(v) === '[object Array]' && v.length === 0); }
+function clone_(o) { return JSON.parse(JSON.stringify(o)); }
+
+/** Fills EMPTY leaves of parent[key] from src; returns how many fields were filled. */
+function fillEmpty_(parent, key, src) {
+  var cur = parent[key];
+  if (isEmpty_(cur)) { parent[key] = clone_(src); return isEmpty_(src) ? 0 : 1; }
+  var isArr = Object.prototype.toString.call(src) === '[object Array]';
+  if (isArr && Object.prototype.toString.call(cur) === '[object Array]' && src.length && Object.prototype.toString.call(src[0]) === '[object Array]') {
+    var n = 0;
+    src.forEach(function (row, i) {
+      if (!cur[i]) { cur[i] = clone_(row); n++; return; }
+      row.forEach(function (v, j) { if (isEmpty_(cur[i][j]) && !isEmpty_(v)) { cur[i][j] = v; n++; } });
+    });
+    return n;
+  }
+  if (src && typeof src === 'object' && !isArr) {
+    var m = 0;
+    Object.keys(src).forEach(function (k) { m += fillEmpty_(cur, k, src[k]); });
+    return m;
+  }
+  return 0;
+}
+
+/** Merges the starter content into the current database. Nothing that already has a value is overwritten. */
+function mergeSeed_(cur, seed) {
+  var n = 0;
+  cur.es = cur.es || {}; cur.i18n = cur.i18n || {es: {}}; cur.i18n.es = cur.i18n.es || {};
+  cur.projects.forEach(function (p) {
+    var s = (seed.projects || []).filter(function (x) { return x.slug === p.slug; })[0];
+    if (!s || !s.es) return;
+    p.es = p.es || {};
+    ['title', 'sub', 'excerpt', 'html'].forEach(function (k) { n += fillEmpty_(p.es, k, s.es[k] || ''); });
+  });
+  n += fillEmpty_(cur, 'es', seed.es || {});
+  var dict = (seed.i18n && seed.i18n.es) || {};
+  Object.keys(dict).forEach(function (k) { if (!cur.i18n.es[k]) { cur.i18n.es[k] = dict[k]; n++; } });
+  n += fillEmpty_(cur.pages.home, 'hero', seed.pages.home.hero);
+  n += fillEmpty_(cur.pages.home, 'phrases', seed.pages.home.phrases);
+  n += fillEmpty_(cur.config, 'clients', seed.config.clients);
+  return n;
+}
+
+function loadStarterContent() {
+  var ui = SpreadsheetApp.getUi();
+  var seed;
+  try { seed = JSON.parse(UrlFetchApp.fetch(SEED_URL + '?_=' + Date.now()).getContentText()); }
+  catch (e) { ui.alert('Could not read the starter content', String(e && e.message || e) + '\n\nURL: ' + SEED_URL, ui.ButtonSet.OK); return; }
+  Object.keys(SCHEMA).forEach(sheet_);                 // make sure every tab/column exists
+  var cur = readAll_(true);
+  var n = mergeSeed_(cur, seed);
+  if (!n) { ui.alert('Nothing to add', 'The database already has all the starter content.', ui.ButtonSet.OK); return; }
+  saveAll_(cur);
+  formatSheets();
+  ui.alert('Done', n + ' empty fields were filled (Spanish, translations, hero phrases, client order).\nNothing you had written was changed.', ui.ButtonSet.OK);
+}
+
+/** Headers, column widths, frozen rows, dropdowns and checkboxes — makes the sheets comfortable to edit. */
+function formatSheets() {
+  var W = {order: 60, status: 90, slug: 220, title: 260, sub: 280, year: 60, client: 160, industry: 150, type: 160, role: 170, country: 100,
+    highlight: 80, link: 160, texture: 90, cover: 220, excerpt: 260, body_html: 240, title_es: 260, sub_es: 280, excerpt_es: 260, body_html_es: 240,
+    text: 420, symbol: 110, text_es: 420, html: 420, html_es: 420, key: 200, value: 520, value_es: 520, en: 380, es: 380};
+  Object.keys(SCHEMA).forEach(function (name) {
+    var sh = sheet_(name), lastCol = Math.max(sh.getLastColumn(), 1);
+    var head = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+    sh.getRange(1, 1, 1, lastCol).setFontWeight('bold').setBackground('#FDEE3D').setFontColor('#222222');
+    sh.setFrozenRows(1);
+    head.forEach(function (h, i) {
+      if (W[h]) sh.setColumnWidth(i + 1, W[h]);
+      if (/_es$/.test(h) || h === 'es') sh.getRange(1, i + 1).setBackground('#F4F4EE');   // Spanish columns: light header
+    });
+    var rows = Math.max(sh.getMaxRows() - 1, 1);
+    var col = function (h) { return head.indexOf(h) + 1; };
+    if (name === 'Projects') {
+      sh.getRange(2, col('status'), rows).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(['published', 'draft'], true).setAllowInvalid(false).build());
+      sh.getRange(2, col('texture'), rows).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(['halftone', 'flow', 'topo', 'dither', 'moire', 'grain', 'particles'], true).build());
+      sh.getRange(2, col('highlight'), rows).insertCheckboxes();
+      sh.getRange(2, 1, rows, lastCol).setVerticalAlignment('top').setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    } else {
+      sh.getRange(2, 1, rows, lastCol).setVerticalAlignment('top').setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    }
+  });
+  var bk = ss_().getSheetByName('Backup'); if (bk) bk.hideSheet();
+}
+
+/** One-screen health report of the database. */
+function checkDatabase() {
+  var d = readAll_(true), msg = [], slugs = {}, dup = [];
+  d.projects.forEach(function (p) { if (slugs[p.slug]) dup.push(p.slug); slugs[p.slug] = 1; });
+  var cnt = function (f) { return d.projects.filter(f).length; };
+  msg.push('Cases: ' + d.projects.length + ' (' + cnt(function (p) { return p.status === 'published'; }) + ' published, ' + cnt(function (p) { return p.status === 'draft'; }) + ' draft)');
+  msg.push('Highlighted on home: ' + cnt(function (p) { return p.highlight; }));
+  msg.push('With cover photo: ' + cnt(function (p) { return p.cover; }) + ' / ' + d.projects.length);
+  msg.push('Spanish — title: ' + cnt(function (p) { return p.es && p.es.title; }) + ', body: ' + cnt(function (p) { return p.es && p.es.html; }) + ' / ' + d.projects.length);
+  msg.push('UI translations (Translations tab): ' + Object.keys(d.i18n.es).length);
+  msg.push('Hero headline: ' + (d.pages.home.hero ? 'OK' : 'EMPTY') + ' · phrases: ' + d.pages.home.phrases.length + ' · client order: ' + d.config.clients.length);
+  var warn = [];
+  if (dup.length) warn.push('Duplicate slugs: ' + dup.join(', '));
+  d.projects.forEach(function (p) {
+    if (p.cover && !/^https?:\/\//.test(p.cover)) warn.push('Cover is not a link: ' + p.slug);
+    if (p.html.length > 49000 || (p.es && p.es.html && p.es.html.length > 49000)) warn.push('Body too long for a cell: ' + p.slug);
+  });
+  if (!Object.keys(d.i18n.es).length || !d.pages.home.hero) warn.push('Run HIPERNOVA → Load starter content.');
+  SpreadsheetApp.getUi().alert('Database check', msg.join('\n') + (warn.length ? '\n\n⚠ ' + warn.join('\n⚠ ') : '\n\n✓ No problems found.'), SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 /** Run to check what the public site will receive. View → Logs. */

@@ -1072,7 +1072,7 @@ function route(){
   document.title = r && TITLES[r] ? `${TITLES[r]} — Jose Augusto Ocampo` : TITLES[""];
   app.innerHTML = !window.HN_READY ? loadingView() : r === "" ? home() : r === "work" ? (slug ? project(decodeURIComponent(slug)) : work()) : r === "approach" ? approach() : r === "about" ? about() : r === "thinking" ? thinking() : notFound();
   const fresh = app.cloneNode(true); app.replaceWith(fresh); // reinicia listeners + animación
-  if (window.HN_READY && r === "work" && !slug) workBind();
+  if (window.HN_READY && r === "work" && !slug) workBind(); window.initHero && initHero(); window.initMethod && initMethod(); window.initMeaning && initMeaning(); window.initPosts && initPosts(); i18nDom();
   document.querySelectorAll("#app canvas.ht").forEach(c => io.observe(c));
   document.querySelectorAll(".nav a").forEach(a => a.classList.toggle("on", a.dataset.r === r));
   $("#nav").classList.remove("open"); $(".menu").setAttribute("aria-expanded", "false");
@@ -1104,6 +1104,13 @@ const store = (s) => ({
 });
 const LS = store(window.localStorage), SS = store(window.sessionStorage);
 const clone = o => JSON.parse(JSON.stringify(o));
+/* an old bug could leave the literal text "undefined" in empty Spanish cells: treat it as empty */
+function scrub(o){
+  if (typeof o === "string") return o === "undefined" ? "" : o;
+  if (Array.isArray(o)){ const a = o.map(scrub); return a.length && a.every(x => x === "") && o.every(x => typeof x === "string") ? [] : a; }
+  if (o && typeof o === "object"){ for (const k of Object.keys(o)) o[k] = scrub(o[k]); }
+  return o;
+}
 const TEXTURES = ["halftone","flow","topo","dither","moire","grain","particles"];
 const SYMBOLS = ["nucleo","expansion","orbita","campo","transicion","halftone","onda","topografia","particulas","superposicion","vector"];
 const LISTS = ["client","industry","type","role","country"];
@@ -1152,7 +1159,7 @@ async function loadAdminData(){
   if (DEMO){ const s = LS.get("hn_demo_data"); return normalize(s ? JSON.parse(s) : await (await fetch("database/seed.json?_=" + Date.now())).json()); }
   const r = await api({action:"readAdmin", token:ADM.token});
   if (r.error){ const e = new Error(r.error); e.auth = r.error === "unauthorized"; throw e; }
-  return normalize(r.data);
+  return normalize(scrub(r.data));
 }
 const stamp = () => { const d = new Date(); return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear(); };
 const strip = (k, v) => k[0] === "_" ? undefined : v;
@@ -1162,7 +1169,7 @@ async function fetchPublic(){
   if (DEMO){ const s = LS.get("hn_demo_data"); if (s) return JSON.parse(s); return (await fetch("database/seed.json?_=" + Date.now())).json(); }
   const r = await fetch(CFG.API_URL + (CFG.API_URL.includes("?") ? "&" : "?") + "action=read&_=" + Date.now());
   const d = await r.json(); if (!d || d.error || !d.projects) throw new Error((d && d.error) || "bad response");
-  LS.set("hn_cache", JSON.stringify(d)); return d;
+  scrub(d); LS.set("hn_cache", JSON.stringify(d)); return d;
 }
 async function loadPublic(){
   try {
@@ -1458,7 +1465,7 @@ function bindEditor(){
 }
 
 /* ---------------------------------------------------------------- import initial content (seed.json → Sheet) */
-const isEmpty = v => v == null || v === "" || (Array.isArray(v) && v.length === 0);
+const isEmpty = v => v == null || v === "" || v === "undefined" || (Array.isArray(v) && v.length === 0);
 function fillEmpty(parent, key, src){
   const cur = parent[key];
   if (isEmpty(cur)){ parent[key] = clone(src); return isEmpty(src) ? 0 : 1; }
@@ -2102,10 +2109,12 @@ const clip = (s, n) => { s = String(s || "").replace(/\s+/g, " ").trim(); return
 async function fetchPosts(){
   const api = window.HN_CONFIG && HN_CONFIG.API_URL, base = ((typeof C !== "undefined" && C.substack) || DEFAULT_SUBSTACK).replace(/\/+$/, "");
   if (api){
-    const r = await fetch(api + (api.includes("?") ? "&" : "?") + "action=posts&_=" + Math.floor(Date.now() / 600000));
-    const j = await r.json(); if (j && Array.isArray(j.posts) && j.posts.length) return j.posts;
+    try {
+      const r = await fetch(api + (api.includes("?") ? "&" : "?") + "action=posts&_=" + Math.floor(Date.now() / 600000));
+      const j = await r.json(); if (j && Array.isArray(j.posts) && j.posts.length) return j.posts;
+    } catch(e){ /* endpoint not authorized yet → fall back to the public feed */ }
   }
-  // fallback (demo mode / API without the posts action): public RSS → JSON (latest ~10)
+  // fallback: public RSS → JSON (latest ~10)
   const r = await fetch("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(base + "/feed"));
   const j = await r.json(); if (j.status !== "ok") throw new Error("feed");
   return j.items.map(it => ({title: it.title, description: clip(it.description.replace(/<[^>]+>/g, " "), 200), image: (it.enclosure && it.enclosure.link) || it.thumbnail || "", url: it.link, date: it.pubDate}));

@@ -16,6 +16,13 @@ const store = (s) => ({
 });
 const LS = store(window.localStorage), SS = store(window.sessionStorage);
 const clone = o => JSON.parse(JSON.stringify(o));
+/* an old bug could leave the literal text "undefined" in empty Spanish cells: treat it as empty */
+function scrub(o){
+  if (typeof o === "string") return o === "undefined" ? "" : o;
+  if (Array.isArray(o)){ const a = o.map(scrub); return a.length && a.every(x => x === "") && o.every(x => typeof x === "string") ? [] : a; }
+  if (o && typeof o === "object"){ for (const k of Object.keys(o)) o[k] = scrub(o[k]); }
+  return o;
+}
 const TEXTURES = ["halftone","flow","topo","dither","moire","grain","particles"];
 const SYMBOLS = ["nucleo","expansion","orbita","campo","transicion","halftone","onda","topografia","particulas","superposicion","vector"];
 const LISTS = ["client","industry","type","role","country"];
@@ -64,7 +71,7 @@ async function loadAdminData(){
   if (DEMO){ const s = LS.get("hn_demo_data"); return normalize(s ? JSON.parse(s) : await (await fetch("database/seed.json?_=" + Date.now())).json()); }
   const r = await api({action:"readAdmin", token:ADM.token});
   if (r.error){ const e = new Error(r.error); e.auth = r.error === "unauthorized"; throw e; }
-  return normalize(r.data);
+  return normalize(scrub(r.data));
 }
 const stamp = () => { const d = new Date(); return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear(); };
 const strip = (k, v) => k[0] === "_" ? undefined : v;
@@ -74,7 +81,7 @@ async function fetchPublic(){
   if (DEMO){ const s = LS.get("hn_demo_data"); if (s) return JSON.parse(s); return (await fetch("database/seed.json?_=" + Date.now())).json(); }
   const r = await fetch(CFG.API_URL + (CFG.API_URL.includes("?") ? "&" : "?") + "action=read&_=" + Date.now());
   const d = await r.json(); if (!d || d.error || !d.projects) throw new Error((d && d.error) || "bad response");
-  LS.set("hn_cache", JSON.stringify(d)); return d;
+  scrub(d); LS.set("hn_cache", JSON.stringify(d)); return d;
 }
 async function loadPublic(){
   try {
@@ -370,7 +377,7 @@ function bindEditor(){
 }
 
 /* ---------------------------------------------------------------- import initial content (seed.json → Sheet) */
-const isEmpty = v => v == null || v === "" || (Array.isArray(v) && v.length === 0);
+const isEmpty = v => v == null || v === "" || v === "undefined" || (Array.isArray(v) && v.length === 0);
 function fillEmpty(parent, key, src){
   const cur = parent[key];
   if (isEmpty(cur)){ parent[key] = clone(src); return isEmpty(src) ? 0 : 1; }

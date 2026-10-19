@@ -117,8 +117,11 @@ RO = 'app.innerHTML = r === "" ? home()'
 assert RO in html, "route anchor"
 html = html.replace(RO, 'app.innerHTML = !window.HN_READY ? loadingView() : r === "" ? home()', 1)
 assert 'if (r === "work" && !slug) workBind();' in html
-html = html.replace('if (r === "work" && !slug) workBind();', 'if (window.HN_READY && r === "work" && !slug) workBind();', 1)
-html = html.replace(RT_OLD, RT_OLD + ' window.initHero && initHero();')
+RT_NEW = 'if (window.HN_READY && r === "work" && !slug) workBind();'
+html = html.replace(RT_OLD, RT_NEW, 1)
+RT_OLD = RT_NEW   # the hook chain below is appended after this statement
+html = html.replace(RT_OLD, RT_OLD + ' window.initHero && initHero();', 1)
+assert 'window.initHero && initHero();' in html
 
 METHOD = """<section class="method-s s-matter">
     <div class="wrap method-in">
@@ -147,6 +150,7 @@ html = html.replace(' window.initHero && initHero();', ' window.initHero && init
 TH_OLD = '<div class="btns">${btn(C.substack, "Read on Substack", "accent")}</div>`)}'
 assert TH_OLD in html, "thinking anchor not found"
 html = html.replace(TH_OLD, '<div class="btns">${btn(C.substack || "https://hipernova.substack.com", "Read on Substack", "accent")}</div><div class="posts" id="posts"></div>`)}', 1)
+assert ' window.initMethod && initMethod();' in html
 html = html.replace(' window.initMethod && initMethod();', ' window.initMethod && initMethod(); window.initPosts && initPosts();')
 
 HDR_OLD = '</nav>\n  </div>\n</header>'
