@@ -206,7 +206,7 @@ config = """<script>
    COVER_STYLE : "mix" (duotone + halftone dots) | "halftone" | "smooth" (duotone only)
    Admin   : click the logo 5 times. The real password lives in Apps Script
              (Script properties → ADMIN_PASSWORD); DEMO_PASSWORD only applies in demo mode. */
-window.HN_CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbyycJ9eKejbK9EVGD9u4uhAKZiGzBTWVBMu-IAgh_NnSGicahm5metHqxcpCDT6DUKcOw/exec", DEMO_PASSWORD: "hipernova", CLICKS: 5, COVER_STYLE: "mix" };
+window.HN_CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbzAY0I4SW7_5R5KyOt1Qx7cIuCrq3cLd71XzSAPL7o1IMH0mY0EWBHNY4FmK3J6onAc8w/exec", DEMO_PASSWORD: "hipernova", CLICKS: 5, COVER_STYLE: "mix" };
 </script>
 """
 css = (HERE / "src" / "admin.css").read_text(encoding="utf8") + """

@@ -13,7 +13,7 @@
  */
 
 var TOKEN_TTL = 6 * 60 * 60; // seconds
-var VERSION = '2026-10-19.1'; // bump when you change this file; the admin warns if the deployed version is older
+var VERSION = '2026-10-19.2'; // bump when you change this file; the admin warns if the deployed version is older
 
 var SCHEMA = {
   Projects:   ['order','status','slug','title','sub','year','client','industry','type','role','country','highlight','link','texture','cover','excerpt','body_html','title_es','sub_es','excerpt_es','body_html_es'],
@@ -293,6 +293,13 @@ function backup_() {
 /* ------------------------------------------------------------ one-time helpers (run from the editor) */
 /** Run once: creates any missing tab with its headers. Not needed if you imported the seed .xlsx. */
 function setup() { Object.keys(SCHEMA).forEach(sheet_); }
+
+/** RUN THIS ONCE from the editor (select "authorize" → Run) to grant the permission to read your Substack.
+ *  It opens Google's "Review permissions" dialog; after accepting, the articles endpoint works. */
+function authorize() {
+  var res = UrlFetchApp.fetch('https://hipernova.substack.com/api/v1/archive?limit=1', {muteHttpExceptions: true});
+  Logger.log('Substack answered ' + res.getResponseCode() + '. Authorization OK.');
+}
 
 /** Run to check what the public site will receive. View → Logs. */
 function testRead() { Logger.log(JSON.stringify(readAll_(false)).slice(0, 800)); }
