@@ -118,3 +118,7 @@
 .adm .lang button{color:#F4F4EE}
 .adm .lang button.on{background:var(--hn-yellow);color:#222}
 .adm .lang button:not(.on):hover{background:rgba(244,244,238,.18)}
+
+.adm-warn{background:#b00020;color:#fff;font:500 12px/1.5 var(--font-mono);letter-spacing:.04em;padding:10px var(--margin-page)}
+.adm-warn[hidden]{display:none}
+.adm-warn u{text-decoration:underline;text-underline-offset:3px;opacity:.9}

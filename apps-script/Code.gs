@@ -13,6 +13,7 @@
  */
 
 var TOKEN_TTL = 6 * 60 * 60; // seconds
+var VERSION = '2026-10-19.1'; // bump when you change this file; the admin warns if the deployed version is older
 
 var SCHEMA = {
   Projects:   ['order','status','slug','title','sub','year','client','industry','type','role','country','highlight','link','texture','cover','excerpt','body_html','title_es','sub_es','excerpt_es','body_html_es'],
@@ -26,6 +27,7 @@ var SCHEMA = {
 /* ------------------------------------------------------------ endpoints */
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'read';
+  if (action === 'ping') return json_({version: VERSION, features: ['covers', 'es', 'posts', 'clients', 'translations']});
   if (action === 'read') return json_(readAll_(false));
   if (action === 'posts') return json_({posts: posts_()});
   return json_({error: 'unknown action'});

@@ -23,7 +23,8 @@ const q = (s, r = document) => r.querySelector(s);
 const qa = (s, r = document) => [...r.querySelectorAll(s)];
 const ea = s => String(s ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 const et = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-const ADM = {lang:"en", open:false, tab:"cases", editing:null, data:null, dirty:false, token:SS.get("hn_tok") || null, busy:false};
+const API_REQUIRED = "2026-10-19.1";   // Code.gs VERSION this site expects
+const ADM = {apiWarn:"", lang:"en", open:false, tab:"cases", editing:null, data:null, dirty:false, token:SS.get("hn_tok") || null, busy:false};
 
 /* ---------------------------------------------------------------- API */
 async function api(payload){
@@ -489,6 +490,7 @@ function buildShell(){
       <button class="hn-btn sm accent" data-act="save" id="adm-save">Save to Sheets</button>
       <button class="hn-btn sm outline" data-act="logout">Log out</button>
     </div>
+    <div class="adm-warn" id="adm-warn" hidden><b>⚠ Database out of date.</b> <span></span> <u>Fix: Apps Script → paste the latest Code.gs → Deploy → Manage deployments → ✎ → New version.</u></div>
     ${DEMO ? `<div class="adm-demo">Demo mode — no Google Sheet connected. Changes are saved in this browser only. Set API_URL in HN_CONFIG to connect the Sheet.</div>` : ""}
     <div class="adm-body" id="adm-body"></div>
   </div>
@@ -501,6 +503,28 @@ async function enterAdmin(){
     catch(e){ if (e.auth){ ADM.token = null; SS.del("hn_tok"); q("#adm-pill").classList.remove("show"); toast("Session expired — click the logo 5 times", true); } else toast("Could not load: " + e.message, true); return; }
   }
   ADM.open = true; document.body.style.overflow = "hidden"; window.ADMIN_ON = true; syncSite(); showPill(); render(); markDirty(ADM.dirty);
+  checkApi();
+}
+async function checkApi(){
+  if (DEMO) return;
+  let msg = "";
+  try {
+    const r = await fetch(CFG.API_URL + (CFG.API_URL.includes("?") ? "&" : "?") + "action=ping&_=" + Date.now()), j = await r.json();
+    if (!j.version) msg = "Your Google Apps Script is an old version (no version number). Spanish, articles and client order will NOT be saved to the Sheet.";
+    else if (j.version < API_REQUIRED) msg = `Your Google Apps Script is out of date (${j.version}, needs ${API_REQUIRED}). Some data will not be saved to the Sheet.`;
+  } catch(e){ msg = "Cannot reach your Google Apps Script. Changes will not be saved."; }
+    ADM.apiWarn = msg; const el = q("#adm-warn"); if (el){ el.hidden = !msg; el.querySelector("span").textContent = msg; }
+}
+/* after saving, read the Sheet back and make sure it really kept the important fields */
+async function verifySave(out){
+  const r = await api({action:"readAdmin", token:ADM.token}); if (r.error || !r.data) return ["could not read back"];
+  const back = r.data, issues = [], n = (d, f) => d.projects.filter(f).length;
+  if (back.projects.length !== out.projects.length) issues.push("cases (" + back.projects.length + " of " + out.projects.length + ")");
+  if (n(out, p => p.cover) !== n(back, p => p.cover)) issues.push("cover photos");
+  const hasEs = d => d.projects.some(p => p.es && (p.es.title || p.es.html));
+  if (hasEs(out) && !hasEs(back)) issues.push("Spanish version");
+  if ((out.config.clients || []).length && !(back.config.clients || []).length) issues.push("client order");
+  return issues;
 }
 function closeAdmin(){ commitBody(); ADM.open = false; document.body.style.overflow = ""; q("#adm").classList.remove("open"); syncSite(); route(); }
 async function persist(){
@@ -521,7 +545,13 @@ async function persist(){
       if (r.error){ const e = new Error(r.error); e.auth = r.error === "unauthorized"; throw e; }
       LS.set("hn_cache", JSON.stringify({...out, projects:out.projects.filter(p => p.status !== "draft")}));
     }
-    markDirty(false); toast(DEMO ? "Saved in this browser (demo)" : "Saved to Google Sheets ✓ " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}));
+    markDirty(false);
+    if (DEMO) toast("Saved in this browser (demo)");
+    else {
+      const bad = await verifySave(out).catch(e => ["could not verify (" + e.message + ")"]);
+      if (bad.length){ toast("Saved, but the Sheet did NOT keep: " + bad.join(", ") + ". Update Code.gs (see the banner).", true); checkApi(); }
+      else toast("Saved to Google Sheets ✓ " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}));
+    }
   } catch(e){
     if (e.auth){ ADM.token = null; SS.del("hn_tok"); toast("Session expired — log in again (your edits are still here)", true); closeAdmin(); }
     else toast("Save failed: " + e.message, true);
