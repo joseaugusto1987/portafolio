@@ -1,10 +1,8 @@
 /* HIPERNOVA — home hero: particle field + rotating phrase with "signal noise" transition.
    Adapted from the HIPERNOVA studio page. Headline and phrases come from the Sheet
-   (Pages: home.hero, home.phrases) and fall back to the defaults below. */
+   (Pages: home.hero, home.phrases). */
 (function(){
 "use strict";
-const DEFAULT_HERO = "I help people, brands and organizations to";
-const DEFAULT_PHRASES = /*PHRASES*/[];
 const GLYPHS = "abcdeghknopqrsuvxyz0123456789#/+*:";
 const HOLD = 3200;
 let stopAll = null;
@@ -15,7 +13,7 @@ function initHero(){
   const cv = sec.querySelector("canvas"), box = sec.querySelector("[data-phrase]");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const home = (typeof PG !== "undefined" && PG.home) || {};
-  const phrases = (home.phrases && home.phrases.length ? home.phrases : DEFAULT_PHRASES).filter(Boolean);
+  const phrases = (home.phrases || []).filter(Boolean);
   const stops = [];
 
   /* ---------- rotating phrase ---------- */

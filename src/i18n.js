@@ -2,14 +2,13 @@
    · Content   : d.es (site texts) and project.es {title, sub, excerpt, html}; empty → falls back to English.
    · UI + tags : exact-text dictionary EN→ES (d.i18n.es from the Sheet "Translations" tab, over the built-in one).
    · setData() builds the localized view; the DOM pass translates fixed UI text after every render. */
-const HN_DICT = /*DICT*/{};
 let LANG = (() => {
   try { const q = new URLSearchParams(location.search).get("lang"); if (q === "es" || q === "en") { localStorage.setItem("hn_lang", q); return q; } } catch(e){}
   try { const s = localStorage.getItem("hn_lang"); if (s === "es" || s === "en") return s; } catch(e){}
   return "en";
 })();
-let I18N_DICT = HN_DICT;
-function i18nLoad(d){ I18N_DICT = Object.assign({}, HN_DICT, (d && d.i18n && d.i18n.es) || {}); }
+let I18N_DICT = {};   // UI + tag translations come from the Sheet ("Translations" tab)
+function i18nLoad(d){ I18N_DICT = (d && d.i18n && d.i18n.es) || {}; }
 function tr(s){
   if (LANG !== "es" || s == null) return s;
   const t = String(s).trim(); if (!t) return s;
@@ -79,14 +78,12 @@ function i18nMerge(b, e){
 function i18nLocalize(d){
   i18nLoad(d);
   if (LANG !== "es") return d;
-  /* if the Sheet has no Spanish yet, fall back to the Spanish that ships with the site */
-  const es = (d.es && Object.keys(d.es).length) ? d.es : ((typeof SEED !== "undefined" && SEED.es) || {});
-  const seedEs = {}; if (typeof SEED !== "undefined") SEED.projects.forEach(p => { if (p.es) seedEs[p.slug] = p.es; });
+  const es = d.es || {};
   const out = Object.assign({}, d);
   out.config = i18nMerge(d.config, es.config || {});
   out.pages = i18nMerge(d.pages, es.pages || {});
   out.projects = d.projects.map(p => {
-    const e = p.es || seedEs[p.slug] || {}, q = Object.assign({}, p);
+    const e = p.es || {}, q = Object.assign({}, p);
     if (e.title) q.title = e.title; if (e.sub) q.sub = e.sub; if (e.excerpt) q.excerpt = e.excerpt;
     q.html = e.html ? e.html : `<p class="no-es"><em>${tr("This case is available in English only for now.")}</em></p>` + (p.html || "");
     return q;

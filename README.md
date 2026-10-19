@@ -41,6 +41,12 @@ Cada vez que cambies `Code.gs`: *Implementar → Gestionar implementaciones → 
 - **Site texts:** textos de Home, Approach (principios), About, Thinking y datos de contacto. Si llenas `email`, aparece el botón “Write to me”.
 - **Save to Sheets** (o ⌘/Ctrl+S) escribe todo en el Sheet. También puedes editar el Sheet a mano: la columna `order` manda el orden, `status` = `draft` oculta un caso.
 
+## Dónde vive el contenido
+
+**Todo el contenido está en el Google Sheet** (casos, textos, español, traducciones, orden de clientes, frases del hero). `index.html` ya no incluye ningún texto de contenido: lo pide al Sheet y guarda una copia en el navegador para cargar rápido. Solo el texto de la interfaz de algunos componentes (Método, "¿Qué es HIPERNOVA?") sigue en el código; su traducción al español sí está en la pestaña `Translations`.
+
+`database/seed.json` y el `.xlsx` son solo el contenido inicial. En el admin, **Import Spanish & translations / Import missing content** rellena en tu Sheet los campos que estén vacíos (nunca sobrescribe lo que ya escribiste); luego pulsa **Save to Sheets**.
+
 ## Español / English
 
 - El selector **EN | ES** está en el encabezado del sitio (recuerda la elección; también acepta `?lang=es`).

@@ -122,3 +122,6 @@
 .adm-warn{background:#b00020;color:#fff;font:500 12px/1.5 var(--font-mono);letter-spacing:.04em;padding:10px var(--margin-page)}
 .adm-warn[hidden]{display:none}
 .adm-warn u{text-decoration:underline;text-underline-offset:3px;opacity:.9}
+
+.adm-note{background:var(--hn-yellow);color:var(--hn-deep-space);padding:14px 16px;margin:0 0 24px;font:400 14px/1.5 var(--font-body);display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.adm-note .hn-btn{flex:none}

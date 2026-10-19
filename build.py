@@ -57,9 +57,9 @@ data["pages"]["home"]["phrases"] = HERO_PHRASES
 (HERE / "database" / "seed.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf8")
 
 # ---- 2. rewire the site script: data comes from Sheets (or cache / seed) ----
-lines[i] = "const SEED = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";"
+lines[i] = ""   # no content is embedded: everything comes from the Sheet (or database/seed.json in demo mode)
 j = next(n for n, l in enumerate(lines) if l.startswith("const P = DATA.projects"))
-I18N_JS = (HERE / "src" / "i18n.js").read_text(encoding="utf8").replace("/*DICT*/{}", json.dumps(TRN.DICT, ensure_ascii=False))
+I18N_JS = (HERE / "src" / "i18n.js").read_text(encoding="utf8")
 lines[j] = I18N_JS + """
 let DATA, P, C, PG;
 function setData(d){
@@ -69,11 +69,14 @@ function setData(d){
   DATA = d; const adm = !!window.ADMIN_ON, v = i18nLocalize(d);
   P = v.projects.filter(p => adm || p.status !== "draft"); C = v.config; PG = v.pages;
 }
+/* No content lives in this file. First paint uses the last copy cached in the browser; the Sheet refreshes it. */
+window.HN_READY = false;
 function initialData(){
   try { const s = localStorage.getItem(HN_CONFIG.API_URL ? "hn_cache" : "hn_demo_data"); if (s) { const d = JSON.parse(s); d.projects.forEach(p => p.status = p.status || "published"); return d; } } catch(e){}
-  return SEED;
+  return null;
 }
-setData(initialData());
+const _d0 = initialData(); if (_d0) { setData(_d0); window.HN_READY = true; }
+const loadingView = () => `<section class="phead s-energy"><div class="wrap"><span class="t-meta" data-nt>Loading…</span></div></section>`;
 /* clients marquee: rows of names, most relevant first (C.clients order, then #projects / recency) */
 function clientRows(n){
   const cnt = {}, last = {};
@@ -95,7 +98,7 @@ HERO_NEW = """<section class="hero-d s-matter">
     <canvas aria-hidden="true"></canvas>
     <div class="hero-in wrap">
       <p class="t-meta hero-top">${C.disciplines.map(esc).join(" · ")}</p>
-      <h1 class="hero-h1"><span class="hero-l">${esc(PG.home.hero || "I help people, brands and organizations to")}</span><span class="hero-ph" data-phrase></span></h1>
+      <h1 class="hero-h1"><span class="hero-l">${esc(PG.home.hero || "")}</span><span class="hero-ph" data-phrase></span></h1>
       <div class="hero-bot">
         <div class="btns">${btn("#/work", "See the work", "accent lg")}${btn("#/approach", "How I work", "outline lg")}</div>
         <span class="hero-tag">People · Systems · Futures</span>
@@ -110,6 +113,11 @@ assert m, "old hero not found"
 html = html[:m.start()] + HERO_NEW + html[m.end():]
 RT_OLD = 'if (r === "work" && !slug) workBind();'
 assert RT_OLD in html
+RO = 'app.innerHTML = r === "" ? home()'
+assert RO in html, "route anchor"
+html = html.replace(RO, 'app.innerHTML = !window.HN_READY ? loadingView() : r === "" ? home()', 1)
+assert 'if (r === "work" && !slug) workBind();' in html
+html = html.replace('if (r === "work" && !slug) workBind();', 'if (window.HN_READY && r === "work" && !slug) workBind();', 1)
 html = html.replace(RT_OLD, RT_OLD + ' window.initHero && initHero();')
 
 METHOD = """<section class="method-s s-matter">
@@ -289,7 +297,7 @@ html.hn-cursor #adm input,html.hn-cursor #adm textarea,html.hn-cursor #adm [cont
 .method-node.on{background:var(--hn-yellow);color:#222}
 .method-node:hover:not(.on){background:#F4F4EE;color:#222}
 """
-hero_js = (HERE / "src" / "hero.js").read_text(encoding="utf8").replace("/*PHRASES*/[]", json.dumps(HERO_PHRASES, ensure_ascii=False))
+hero_js = (HERE / "src" / "hero.js").read_text(encoding="utf8")
 js = (HERE / "src" / "admin.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "duo.js").read_text(encoding="utf8") + "\n" + hero_js + "\n" + (HERE / "src" / "method.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "posts.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "meaning.js").read_text(encoding="utf8") + "\n" + (HERE / "src" / "cursor.js").read_text(encoding="utf8")
 import base64
 FAV = "data:image/png;base64," + base64.b64encode((HERE / "favicon.png").read_bytes()).decode()

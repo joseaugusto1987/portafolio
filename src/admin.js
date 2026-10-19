@@ -45,7 +45,7 @@ function normalize(d){
   d.es = d.es || {}; d.es.config = d.es.config || {}; d.es.pages = d.es.pages || {};
   ["home","approach","about","thinking"].forEach(k => d.es.pages[k] = d.es.pages[k] || {});
   d.projects.forEach(p => p.es = p.es || {});
-  d.i18n = d.i18n || {}; d.i18n.es = Object.assign({}, HN_DICT, d.i18n.es || {});
+  d.i18n = d.i18n || {}; d.i18n.es = d.i18n.es || {};
   d.config = d.config || {}; d.config.clients = d.config.clients || []; d.pages = d.pages || {};
   ["home","approach","about","thinking"].forEach(k => d.pages[k] = d.pages[k] || {});
   d.pages.home.phrases = d.pages.home.phrases || []; d.pages.home.hero = d.pages.home.hero || "";
@@ -61,7 +61,7 @@ async function login(pw){
   SS.set("hn_tok", ADM.token);
 }
 async function loadAdminData(){
-  if (DEMO){ const s = LS.get("hn_demo_data"); return normalize(s ? JSON.parse(s) : clone(SEED)); }
+  if (DEMO){ const s = LS.get("hn_demo_data"); return normalize(s ? JSON.parse(s) : await (await fetch("database/seed.json?_=" + Date.now())).json()); }
   const r = await api({action:"readAdmin", token:ADM.token});
   if (r.error){ const e = new Error(r.error); e.auth = r.error === "unauthorized"; throw e; }
   return normalize(r.data);
@@ -69,18 +69,25 @@ async function loadAdminData(){
 const stamp = () => { const d = new Date(); return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear(); };
 const strip = (k, v) => k[0] === "_" ? undefined : v;
 
-/* public data (what visitors see) */
+/* public data (what visitors see) — always from the Sheet; demo mode reads database/seed.json */
+async function fetchPublic(){
+  if (DEMO){ const s = LS.get("hn_demo_data"); if (s) return JSON.parse(s); return (await fetch("database/seed.json?_=" + Date.now())).json(); }
+  const r = await fetch(CFG.API_URL + (CFG.API_URL.includes("?") ? "&" : "?") + "action=read&_=" + Date.now());
+  const d = await r.json(); if (!d || d.error || !d.projects) throw new Error((d && d.error) || "bad response");
+  LS.set("hn_cache", JSON.stringify(d)); return d;
+}
 async function loadPublic(){
   try {
-    let d;
-    if (DEMO){ const s = LS.get("hn_demo_data"); if (!s) return; d = JSON.parse(s); }
-    else {
-      const r = await fetch(CFG.API_URL + (CFG.API_URL.includes("?") ? "&" : "?") + "action=read&_=" + Date.now());
-      d = await r.json(); if (!d || d.error || !d.projects) return;
-      LS.set("hn_cache", JSON.stringify(d));
+    const d = await fetchPublic(); d.projects.forEach(p => p.status = p.status || "published");
+    if (window.ADMIN_ON) return;
+    if (!window.HN_READY || JSON.stringify(d) !== JSON.stringify(DATA)){ window.HN_READY = true; setData(d); route(); }
+  } catch(e){
+    console.warn("[HN] could not load the content:", e);
+    if (!window.HN_READY){
+      q("#app").innerHTML = `<section class="phead s-energy"><div class="wrap"><span class="t-meta" data-nt>Connection</span><h1>Content unavailable.</h1><p class="t-lead">The portfolio couldn't load its content. Check your connection and try again.</p><div class="btns"><button class="hn-btn" id="hn-retry">Retry</button></div></div></section>`;
+      q("#hn-retry").onclick = () => { q("#app").innerHTML = loadingView(); loadPublic(); };
     }
-    if (!window.ADMIN_ON && JSON.stringify(d) !== JSON.stringify(DATA)){ setData(d); route(); }
-  } catch(e){ console.warn("[HN] could not refresh from Sheets:", e); }
+  }
 }
 
 /* ---------------------------------------------------------------- helpers */
@@ -362,6 +369,33 @@ function bindEditor(){
   });
 }
 
+/* ---------------------------------------------------------------- import initial content (seed.json → Sheet) */
+const isEmpty = v => v == null || v === "" || (Array.isArray(v) && v.length === 0);
+function fillEmpty(parent, key, src){
+  const cur = parent[key];
+  if (isEmpty(cur)){ parent[key] = clone(src); return isEmpty(src) ? 0 : 1; }
+  if (Array.isArray(src) && Array.isArray(cur) && src.length && Array.isArray(src[0])){
+    let n = 0; src.forEach((row, i) => { if (!cur[i]){ cur[i] = clone(row); n++; return; } row.forEach((v, j) => { if (isEmpty(cur[i][j]) && !isEmpty(v)){ cur[i][j] = v; n++; } }); }); return n;
+  }
+  if (src && typeof src === "object" && !Array.isArray(src)){ let n = 0; for (const k in src) n += fillEmpty(cur, k, src[k]); return n; }
+  return 0;
+}
+const hasSpanish = d => d.projects.some(p => p.es && (p.es.title || p.es.html)) && Object.keys((d.i18n && d.i18n.es) || {}).length > 0;
+async function importSeed(){
+  let seed; try { seed = await (await fetch("database/seed.json?_=" + Date.now())).json(); } catch(e){ return toast("Could not read database/seed.json", true); }
+  const D = ADM.data; let n = 0;
+  for (const p of D.projects){
+    const s = seed.projects.find(x => x.slug === p.slug); if (!s || !s.es) continue;
+    p.es = p.es || {}; ["title", "sub", "excerpt", "html"].forEach(k => { n += fillEmpty(p.es, k, s.es[k] || ""); });
+  }
+  n += fillEmpty(D, "es", seed.es || {});
+  D.i18n.es = D.i18n.es || {}; Object.keys((seed.i18n && seed.i18n.es) || {}).forEach(k => { if (!D.i18n.es[k]){ D.i18n.es[k] = seed.i18n.es[k]; n++; } });
+  n += fillEmpty(D.pages.home, "hero", seed.pages.home.hero); n += fillEmpty(D.pages.home, "phrases", seed.pages.home.phrases);
+  n += fillEmpty(D.config, "clients", seed.config.clients);
+  if (!n) return toast("Nothing to import: the database already has this content");
+  markDirty(); syncSite(); render(); toast(`Imported ${n} missing fields. Press “Save to Sheets” to store them.`);
+}
+
 /* ---------------------------------------------------------------- views */
 const coverHTML = p => p.cover ? `<img class="duo" referrerpolicy="no-referrer" src="${ea(p.cover)}" alt=""><button type="button" class="ib" data-act="cover-clear">Remove cover</button>` : `<div class="cover-none">No cover — the “${et(p.texture)}” texture is used</div>`;
 const chipsHTML = (key, vals) => {
@@ -372,6 +406,8 @@ function viewCases(){
   const P = ADM.data.projects, pub = P.filter(p => p.status === "published").length;
   return `<div class="row-h"><div><h1>Cases</h1><p class="muted" style="margin:0">${P.length} cases · ${pub} published · ${P.length - pub} draft. Order here = order on the site.</p></div>
     <button class="hn-btn accent" data-act="new">New case</button></div>
+    ${hasSpanish(ADM.data) ? "" : `<div class="adm-note"><b>The database has no Spanish content yet.</b> Import the Spanish texts, case translations and UI translations that ship with the project, then save. Only empty fields are filled; nothing you wrote is overwritten.
+      <button class="hn-btn sm accent" data-act="import-seed">Import Spanish &amp; translations</button></div>`}
     <div class="cl">${P.map((p, i) => `<div class="cl-r">
       <span class="n">${pad(i + 1)}</span>
       <button class="tt" data-act="edit" data-i="${i}">${et(p.title || "Untitled")}${p.es && p.es.html ? ' <span class="st pub" style="font-size:9px;padding:3px 5px;cursor:default">ES</span>' : ""}</button>
@@ -446,6 +482,7 @@ function listEditor(list, pathBase, rows){
 function viewSite(){
   const D = ADM.data;
   return `<h1>Site texts</h1><p class="muted">Everything that isn't a case. Lists use one item per line.</p>
+  <div class="adm-note" style="margin-bottom:8px">Fill any empty field (Spanish, translations, hero phrases, client order) from the project's starter content. Existing text is never overwritten. <button class="hn-btn sm" data-act="import-seed">Import missing content</button></div>
   <h2 class="sh">Identity & contact</h2><div class="g2">${F("Name", "config.name")}${F("Role", "config.role")}</div>
   ${F("Disciplines (one per line)", "config.disciplines")}
   ${F("Client order — one name per line, most relevant first (shown in 5 moving rows on the home)", "config.clients", {rows:10, hint:"Names must match the Client field of your cases. Clients not listed follow automatically (by number of projects, then recency)."})}
@@ -561,7 +598,7 @@ async function logout(){
   if (ADM.dirty && !confirm("You have unsaved changes. Log out anyway?")) return;
   ADM.open = false; ADM.data = null; ADM.token = null; ADM.dirty = false; ADM.editing = null; window.ADMIN_ON = false;
   SS.del("hn_tok"); document.body.style.overflow = ""; q("#adm").classList.remove("open"); q("#adm-pill").classList.remove("show");
-  try { const s = LS.get(DEMO ? "hn_demo_data" : "hn_cache"); if (s) setData(JSON.parse(s)); else setData(SEED); } catch(e){ setData(SEED); }
+  try { const s = LS.get(DEMO ? "hn_demo_data" : "hn_cache"); if (s) setData(JSON.parse(s)); } catch(e){}
   route(); loadPublic();
 }
 
@@ -577,6 +614,7 @@ async function onClick(e){
   const act = t.dataset.act, i = +t.dataset.i, P = ADM.data.projects;
   switch(act){
     case "save": return persist();
+    case "import-seed": return importSeed();
     case "logout": return logout();
     case "preview": { commitBody(); const p = ADM.editing != null ? P[ADM.editing] : null; ADM.open = false; document.body.style.overflow = ""; q("#adm").classList.remove("open"); syncSite(); location.hash = p ? "#/work/" + p.slug : "#/"; route(); return; }
     case "view": { ADM.open = false; document.body.style.overflow = ""; q("#adm").classList.remove("open"); syncSite(); location.hash = "#/work/" + P[i].slug; route(); return; }
