@@ -37,6 +37,8 @@ for _p in data["projects"]:
         _cnt[_c] = _cnt.get(_c, 0) + 1; _last[_c] = max(_last.get(_c, 0), _p.get("year") or 0)
 data["config"]["clients"] = sorted(_cnt, key=lambda c: (-_cnt[c], -_last[c], c))   # priority: #projects, then recency
 data["es"] = TRN.ES
+_fx = HERE / "src" / "es_fixes.json"
+data["es_fixes"] = json.loads(_fx.read_text(encoding="utf8")) if _fx.exists() else []   # safe overwrites of Spanish text (applied only if the cell still equals "old")
 data["i18n"] = {"es": TRN.DICT}
 BODIES_ES = json.loads((HERE / "src" / "case_bodies_es.json").read_text(encoding="utf8"))  # {slug: html_es}
 for _p, (_t, _s) in zip(data["projects"], TRN.CASES):

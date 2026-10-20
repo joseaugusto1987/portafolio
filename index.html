@@ -1484,6 +1484,7 @@ async function importSeed(){
     p.es = p.es || {}; ["title", "sub", "excerpt", "html"].forEach(k => { n += fillEmpty(p.es, k, s.es[k] || ""); });
   }
   n += fillEmpty(D, "es", seed.es || {});
+  (seed.es_fixes || []).forEach(f => { const p = D.projects.find(x => x.slug === f.slug); if (p && p.es && p.es[f.field] === f.old){ p.es[f.field] = f.new; n++; } });
   D.i18n.es = D.i18n.es || {}; Object.keys((seed.i18n && seed.i18n.es) || {}).forEach(k => { if (!D.i18n.es[k]){ D.i18n.es[k] = seed.i18n.es[k]; n++; } });
   n += fillEmpty(D.pages.home, "hero", seed.pages.home.hero); n += fillEmpty(D.pages.home, "phrases", seed.pages.home.phrases);
   n += fillEmpty(D.config, "clients", seed.config.clients);

@@ -57,6 +57,12 @@ DICT = {
     "Conditions change, and so do the people who inhabit them. It isn't an improvement on what came before: it's another configuration.": "Cambian las condiciones y cambian quienes las habitan. No es una mejora de lo anterior: es otra configuración.",
     "Something emerges that couldn't have been planned in advance. A new order born from everything that moved.": "Surge algo que no podía planificarse de antemano. Un orden nuevo que nace de todo lo que se movió.",
     "My intention isn't to produce change.": "Mi intención no es producir cambio.", "It's to alter trajectories.": "Es alterar trayectorias.",
+    # added after launch: new tags and client names that appear in English
+    "Energy & Construction": "Energía y construcción", "AI & Strategic Design": "IA y diseño estratégico",
+    "Consulting Director / Strategic Lead": "Director de consultoría / Líder estratégico",
+    "Ministry of Culture": "Ministerio de Cultura", "Ministry of Education": "Ministerio de Educación",
+    "Gold Museum of Bogotá": "Museo del Oro de Bogotá", "The Bogotá Chamber of Commerce (CCB)": "Cámara de Comercio de Bogotá (CCB)",
+    "Panama Canal Authority": "Autoridad del Canal de Panamá",
     # industries
     "CPG": "Bienes de consumo", "Culture & Museums": "Cultura y museos", "Education": "Educación", "Energy": "Energía",
     "Financial Services": "Servicios financieros", "Government / Public": "Gobierno / Público", "Goverment / Public": "Gobierno / Público", "Retail": "Retail",

@@ -13,7 +13,7 @@
  */
 
 var TOKEN_TTL = 6 * 60 * 60; // seconds
-var VERSION = '2026-10-19.4'; // bump when you change this file; the admin warns if the deployed version is older
+var VERSION = '2026-10-20.1'; // bump when you change this file; the admin warns if the deployed version is older
 
 var SCHEMA = {
   Projects:   ['order','status','slug','title','sub','year','client','industry','type','role','country','highlight','link','texture','cover','excerpt','body_html','title_es','sub_es','excerpt_es','body_html_es'],
@@ -352,6 +352,11 @@ function mergeSeed_(cur, seed) {
     ['title', 'sub', 'excerpt', 'html'].forEach(function (k) { n += fillEmpty_(p.es, k, s.es[k] || ''); });
   });
   n += fillEmpty_(cur, 'es', seed.es || {});
+  // safe overwrites: replace a Spanish value only if it is still exactly the old text (never touches your own edits)
+  (seed.es_fixes || []).forEach(function (f) {
+    var p = cur.projects.filter(function (x) { return x.slug === f.slug; })[0];
+    if (p && p.es && p.es[f.field] === f.old) { p.es[f.field] = f.new; n++; }
+  });
   var dict = (seed.i18n && seed.i18n.es) || {};
   Object.keys(dict).forEach(function (k) { if (!cur.i18n.es[k]) { cur.i18n.es[k] = dict[k]; n++; } });
   n += fillEmpty_(cur.pages.home, 'hero', seed.pages.home.hero);
